@@ -14,6 +14,7 @@ import {
   addHeadingIds,
   closeVoidTags,
   normalizeThematicBreaks,
+  setextToAtx,
   shiftHeadings,
   slugify,
   startOnANewPage,
@@ -40,9 +41,12 @@ export interface Document {
  *
  * Tolerant: a file with no frontmatter, or frontmatter with no title, gives a null
  * title and leaves the caller to find one — see documentTitle. An unterminated block
- * still fails, because where the body starts is then a guess.
+ * still fails, because where the body starts is then a guess. A leading byte-order mark
+ * and CRLF line endings are normalized away first: left in, they would hide the
+ * frontmatter, and its YAML would print as body text.
  */
-export function splitFrontmatter(text: string): { title: string | null; body: string } {
+export function splitFrontmatter(raw: string): { title: string | null; body: string } {
+  const text = raw.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
   if (!text.startsWith("---\n")) return { title: null, body: text };
   const end = text.indexOf("\n---\n", 3);
   if (end === -1) throw new Error("unterminated frontmatter");
@@ -63,7 +67,12 @@ export function titleFromName(docPath: string): string {
   const parts = docPath.replace(/\.md$/i, "").split("/");
   let stem = parts.pop() ?? "";
   if (stem.toLowerCase() === "index" && parts.length) stem = parts.pop() ?? stem;
-  const words = stem.replace(/^\d+[-_]/, "").split(/[-_\s]+/).filter(Boolean).join(" ") || stem;
+  const words =
+    stem
+      .replace(/^\d+[-_]/, "")
+      .split(/[-_\s]+/)
+      .filter(Boolean)
+      .join(" ") || stem;
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
@@ -180,8 +189,9 @@ export function collectDocuments(site: Pick<Site, "docs">): Document[] {
     } catch (error) {
       throw new Error(`${docPath}: ${(error as Error).message}`);
     }
-    const title = documentTitle(docPath, split.title, split.body);
-    return { path: docPath, title, body: ensureTitleHeading(title, split.body) };
+    const body = setextToAtx(split.body);
+    const title = documentTitle(docPath, split.title, body);
+    return { path: docPath, title, body: ensureTitleHeading(title, body) };
   });
 }
 

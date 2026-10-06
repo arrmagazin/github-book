@@ -37,7 +37,7 @@ const USAGE = `usage: [SITE=<site>] bun book/build.ts [--epub] [--pdf] [--markdo
   --markdown   assemble build/<site>/<site>.md and stop
   --src <dir>  read the markdown from a local checkout instead of cloning
                the tag in <site>_www/index.html (needs a single SITE)
-  --refresh    discard the cached clone and clone again`;
+  --refresh    clone again, replacing the cached clone once the new one succeeds`;
 
 interface Options extends SourceOptions {
   epub: boolean;
@@ -118,11 +118,15 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
   }
 
   // One SITE, or every site. --src names one checkout, so it can only feed one site.
-  if (options.src && !process.env.SITE) fail(`--src needs a single site: SITE=<site> bun book/build.ts --src ${options.src}`);
+  if (options.src && !process.env.SITE) {
+    fail(`--src needs a single site: SITE=<site> bun book/build.ts --src ${options.src}`);
+  }
   const names = process.env.SITE ? [requireSite()] : sites();
   if (!names.length) fail("no sites: expected at least one <site>_www/index.html");
 
-  if (!options.markdownOnly && spawnSync("pandoc", ["--version"]).error) fail("pandoc is not installed: brew install pandoc");
+  if (!options.markdownOnly && spawnSync("pandoc", ["--version"]).error) {
+    fail("pandoc is not installed: brew install pandoc");
+  }
 
   // A failing site is reported and skipped, so one broken book does not hold back
   // the rest; the exit code still says something failed.

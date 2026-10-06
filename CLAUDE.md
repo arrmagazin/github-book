@@ -143,10 +143,16 @@ npm run new-site -- <name> <firebase-site-id> <owner/repo@ref> [--scope docs] [-
 It creates `<name>_www/` from `shared/template/` with `version` 0, appends a
 `firebase.json` entry (a copy of the first, with the new `target` and `public`), adds the
 `.firebaserc` target, and runs `link-shared.sh`. It refuses if the folder or the target
-already exists. Optional flags fill the template: `--title`, `--description`,
-`--keywords a,b`, `--book-title`, `--subtitle`, `--author`, `--language`, `--year`,
-`--book-description`, `--subjects a,b`. Values may not contain `"`, `<`, `>`, `&`, `\` or
-line breaks, because they are written in unescaped.
+already exists, or if another target already deploys to `<firebase-site-id>` (deploying
+either would replace the other's release). `--project` may be an alias from `.firebaserc`
+`projects`; the target is written under the project id it names, where firebase-tools
+looks for it.
+
+Optional flags fill the template: `--title`, `--description`, `--keywords a,b`,
+`--book-title`, `--subtitle`, `--author`, `--language`, `--year`, `--book-description`,
+`--subjects a,b`. Values are written in unescaped: into HTML attributes, JSON strings and
+double-quoted YAML scalars. So they may not contain `"`, `<`, `>`, `&`, `\` or line breaks;
+anything else, `: ` and `#` included, is safe.
 
 Then, by hand:
 
@@ -172,11 +178,15 @@ The book follows the same line: `SITE=<site> npm run book` clones the new tag.
 `--pdf`, `--markdown`, `--src <dir>` (a local checkout, one site only), `--refresh`.
 
 - Source: `siteSource()` gives repo, ref and scope; the builder shallow-clones the ref into
-  `build/<site>/src/<ref>/` and reuses it until `--refresh`. The ref must be an exact tag
-  or branch, not a jsDelivr range.
+  `build/<site>/src/<owner>/<repo>/<ref>/` and reuses it until `--refresh`. The ref must be
+  an exact tag or branch, not a jsDelivr range.
 - Outputs: `build/<site>/<site>.md`, `.epub`, `.pdf`. Diagrams cache in `build/diagrams/`.
 - Needs pandoc, xelatex (PDF), git, npx (mermaid) and Chrome (cover). Missing `book.yaml`
   fails that site; missing `cover.png` or Chrome only drops the cover.
+- Known state: `arrmagazin/engx@1.0.1`, the tag `engx_www` pins, fails the structure check
+  (two links to `#glossary--delivery` and `#glossary--solution`; engx fixed them after the
+  tag). Until a new tag is released and pinned, build engx from its working tree:
+  `SITE=engx npm run book -- --src ../engx`.
 
 Why it does what it does (titles, reading order, page breaks, ids, links, `---`, mermaid,
 cover, void tags, image formats, table rules, callouts, PDF layout) is in

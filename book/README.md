@@ -9,8 +9,12 @@ npm run book                                  # every site, both formats
 SITE=engx npm run book -- --pdf               # one site, one format (or --epub)
 SITE=engx npm run book -- --markdown          # assemble and verify only, render nothing
 SITE=engx npm run book -- --src ../engx       # build from a local checkout, not the tag
-SITE=engx npm run book -- --refresh           # discard the cached clone, clone again
+SITE=engx npm run book -- --refresh           # clone again, replacing the cached clone
 ```
+
+Known state: engx's pinned tag `1.0.1` fails the structure check (two dead glossary links,
+fixed in engx after that tag), so engx builds only with `--src ../engx` until a new tag is
+released and pinned in `engx_www/index.html`.
 
 With no `SITE`, it builds every site in turn. A site that fails is reported with its name
 and skipped. The other sites still build, and the exit code is 1 at the end.
@@ -20,7 +24,7 @@ and skipped. The other sites still build, and the exit code is 1 at the end.
 | What | Where |
 | --- | --- |
 | Source repo, ref, scope | `<site>_www/index.html`, the `const repo` and `const scope` lines, read by `scripts/utils/site.ts` |
-| The markdown | `build/<site>/src/<ref>/<scope>/`, a shallow clone at that ref, or `--src <dir>/<scope>` |
+| The markdown | `build/<site>/src/<owner>/<repo>/<ref>/<scope>/`, a shallow clone at that ref, or `--src <dir>/<scope>` |
 | Title, author, rights | `<site>_www/book.yaml`, passed to pandoc as `--metadata-file`. Missing → that site fails |
 | Cover photograph | `<site>_www/cover.png`, PNG only. Missing → no cover, the build continues |
 | Outputs | `build/<site>/<site>.md`, `.epub`, `.pdf` |
@@ -31,7 +35,10 @@ The clone runs `git clone --depth 1 --branch <ref>`, so the ref must be an exact
 branch, not a jsDelivr range such as `@1` or `@latest`. It lands in `<dest>.part` and is
 renamed into place only when complete, so a half-finished clone is never reused. It runs
 with `GIT_TERMINAL_PROMPT=0`, so a private or missing repo fails rather than asking for a
-password. A cached clone is reused until `--refresh`. `--src` needs a single `SITE`.
+password. A cached clone is reused until `--refresh`; its path names owner, repo and ref,
+so a site pointed at another repo with the same tag clones afresh. `--refresh` clones
+first and replaces the cached copy only on success, so a failed refresh keeps it.
+`--src` needs a single `SITE`.
 
 ## Modules
 
@@ -41,7 +48,7 @@ password. A cached clone is reused until `--refresh`. `--src` needs a single `SI
 | `context.ts` | `ROOT`, `BUILD`, `DIAGRAMS`, the `Site` interface, shared helpers |
 | `source.ts` | `resolveSite()`: checks a site's inputs, then `--src` or the clone |
 | `assemble.ts` | frontmatter, titles, link rewriting, document anchors, reading order |
-| `markdown.ts` | line transforms that skip fenced code: heading ids and levels, breaks, void tags |
+| `markdown.ts` | line transforms that skip fenced code: setext to ATX, heading ids and levels, breaks, void tags |
 | `diagrams.ts` | mermaid extraction and the `mermaid-cli` run |
 | `raster.ts` | headless Chrome rasterizer |
 | `cover.ts` | the cover SVG and its cache |
@@ -57,7 +64,12 @@ No module derives a path from one site's layout. A `Site` object carries `name`,
   heading, else its file name: the number prefix dropped, kebab-case turned to words, the
   first letter capital. An `index.md` takes its folder's name. A body with no level-1
   heading is opened with `# <title>` before reading order, ids or links see it.
-  Frontmatter is optional; frontmatter with no closing `---` fails.
+  Frontmatter is optional; frontmatter with no closing `---` fails. A leading byte-order
+  mark and CRLF line endings are normalized first, so they cannot hide the frontmatter.
+- **Setext headings.** `Title` over `=====` (or `-----`) is rewritten as `# Title` (or
+  `## Title`) before anything else reads the body, since every later step reads ATX
+  headings only, and `---` normalizing would turn a `-----` underline into a rule. As in
+  pandoc, the text is one line with a blank line before it, outside fenced code.
 - **Reading order.** The root `index.md` first, then folders in name order, each led by
   its `index.md`, which keeps its heading level and so reads as the chapter opener. Its
   siblings are demoted one level beneath it. Any other root file closes the book as a
@@ -78,9 +90,9 @@ No module derives a path from one site's layout. A `Site` object carries `name`,
   anchor points at the target document's title. A link to any other file in the content
   repo, such as an image, becomes a path relative to the repo root (`src`).
 - **Normalizing `---`.** A bare dashed line is ambiguous in pandoc's markdown: YAML
-  metadata, a setext underline, or a multiline-table delimiter. Read as the last of those,
-  it swallows every following heading into table cells, with a zero exit code. The builder
-  emits `***` instead. Then `verifyAnchors` re-renders the assembled file and fails the
+  metadata, a setext underline (already rewritten, see above), or a multiline-table
+  delimiter. Read as the last of those, it swallows every following heading into table
+  cells, with a zero exit code. The builder emits `***` instead. Then `verifyAnchors` re-renders the assembled file and fails the
   build if any declared heading id or link target did not survive.
 - **Mermaid diagrams.** Neither format renders a mermaid fence; pandoc prints it as code.
   So diagrams are rasterized first, by `mermaid-cli` under `npx` at a pinned version. Each
@@ -107,9 +119,12 @@ No module derives a path from one site's layout. A `Site` object carries `name`,
 
 ## Paths at render time
 
-Every pandoc call runs with cwd `ROOT` and `--resource-path <src>:<ROOT>`. The assembled
+Every pandoc call runs with cwd `ROOT` and `--resource-path <ROOT>:<src>`. The assembled
 markdown names two kinds of image: the content repo's own, relative to `src`, and the
-generated diagrams, relative to `ROOT`. LaTeX's `\includegraphics` of the cover is not
+generated diagrams, relative to `ROOT`. `ROOT` comes first because the first directory
+holding a path wins: a checkout passed with `--src` may carry its own `build/diagrams/`
+under the same hash names (an engx working tree does), and would otherwise shadow the
+diagrams just rendered. LaTeX's `\includegraphics` of the cover is not
 resolved through the resource path. xelatex runs in pandoc's working directory, which is
 why the cover path is relative to `ROOT`.
 

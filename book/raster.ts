@@ -8,7 +8,7 @@
  * book is built without a cover.
  */
 
-import { spawn, type ChildProcess } from "node:child_process";
+import { type ChildProcess, spawn } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -106,6 +106,7 @@ export async function rasterizeSvg(svg: string, destination: string, profile: st
   fs.rmSync(partial, { force: true });
   const child = spawn(
     CHROME,
+    // biome-ignore format: flags grouped by purpose
     [
       "--headless", "--disable-gpu", "--hide-scrollbars",
       "--no-first-run", "--no-default-browser-check",

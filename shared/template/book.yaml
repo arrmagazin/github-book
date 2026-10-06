@@ -1,9 +1,10 @@
 # Book metadata for book/build.ts. Pandoc reads this for both formats.
-title: {{bookTitle}}
-subtitle: {{subtitle}}
-author: {{author}}
-language: {{language}}
-rights: © {{year}} {{author}}. All rights reserved.
+# Scalars are double-quoted: a plain one breaks on `: ` and is cut short at ` #`.
+title: "{{bookTitle}}"
+subtitle: "{{subtitle}}"
+author: "{{author}}"
+language: "{{language}}"
+rights: "© {{year}} {{author}}. All rights reserved."
 description: >-
   {{bookDescription}}
 subject:{{subjectsYaml}}

@@ -31,6 +31,11 @@ github.com/<owner>/<repo>@<tag>/<scope>/*.md
 
 ## Run a site
 
+Needs [bun](https://bun.sh) (it runs every serve, build, book and new-site script), the
+sibling checkouts `../arrmatura-books` and `../ultimus` (linked into `node_modules`), and
+for deploys the [firebase CLI](https://firebase.google.com/docs/cli), logged in. The book
+tools are listed under **Build the books**.
+
 ```sh
 npm install                  # once: toolchain, library links, shared-file links
 SITE=engx npm run dev        # serves engx on http://localhost:8092
@@ -61,6 +66,11 @@ The builder clones each site's tag into `build/<site>/src/` and writes
 `xelatex`; `--markdown` assembles and checks the structure without rendering either.
 Title, author and rights come from `<site>_www/book.yaml`; the cover is generated from
 them over `<site>_www/cover.png`. Details: [book/README.md](book/README.md).
+
+> Known state: `engx_www` pins `arrmagazin/engx@1.0.1`, which fails the structure check
+> (two dead glossary links, fixed in engx after that tag), so `npm run book` reports
+> `failed: engx`. Until a new tag is released and pinned, use
+> `SITE=engx npm run book -- --src ../engx`.
 
 ## Add a site
 

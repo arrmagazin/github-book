@@ -24,7 +24,8 @@
     "**/*.ts"
   ],
   "exclude": [
-    "dist",
+    "build",
+    "**/dist",
     "node_modules"
   ]
 }

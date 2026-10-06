@@ -35,7 +35,8 @@
   <meta name="format-detection" content="telephone=no" />
   <script>
     // The book's source: a TAGGED release of a public GitHub repo, served by jsDelivr.
-    // The ONE place it is stated: the book builder (book/build.ts) parses these two lines too.
+    // The ONE place it is stated: scripts/utils/site.ts (siteSource) parses these two
+    // lines for the book builder too.
     const repo = '{{repo}}';
     const scope = "{{scope}}";
     window.R = {

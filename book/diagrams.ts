@@ -89,6 +89,7 @@ function runMermaidCli(jobs: [string, string][]): void {
     if (stale.startsWith(`${stem}-`) && stale.endsWith(".png")) fs.unlinkSync(path.join(BUILD, stale));
   }
   fs.writeFileSync(scratch, jobs.map(([, source]) => `\`\`\`mermaid\n${source}\n\`\`\``).join("\n\n") + "\n");
+  // biome-ignore format: each flag beside its value
   const args = [
     "-y", "-p", MERMAID_CLI, "mmdc",
     "-i", scratch, "-o", rendered,

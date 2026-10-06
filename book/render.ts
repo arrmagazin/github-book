@@ -3,7 +3,12 @@
  *
  * Every pandoc call runs with cwd ROOT. The assembled markdown names two kinds of
  * image: the content repo's own, relative to the checkout (rewriteLinks), and the
- * generated diagrams, relative to ROOT. Both directories go on --resource-path.
+ * generated diagrams, relative to ROOT. Both directories go on --resource-path, ROOT
+ * first: the first directory that holds a path wins, and a content checkout may carry
+ * a build/diagrams/ cache of its own under the same hash names (an engx working tree
+ * passed with --src does), which would otherwise shadow the diagrams just rendered.
+ * ROOT's top level is small and known (book/, build/, scripts/, shared/, *_www/), so
+ * it does not shadow the content repo's images in turn.
  * LaTeX's \includegraphics of the cover is not resolved through it: xelatex runs in
  * pandoc's working directory, which is why the cover path is relative to ROOT.
  */
@@ -66,6 +71,7 @@ const PDF_CALLOUT =
 const PDF_DEFINITION_LIST =
   "\\usepackage{enumitem}" + "\\AtBeginEnvironment{description}{\\setlist[itemize]{leftmargin=1.2em}}";
 
+// biome-ignore format: one preamble line per command
 const PDF_HEADER_INCLUDES =
   "header-includes=" +
   "\\usepackage{etoolbox}" +
@@ -153,15 +159,17 @@ export function render(
   outPath: string,
   cover: string | null,
 ): void {
+  // biome-ignore format: each flag beside its value
   const args = [
     markdownPath,
     "--from", PANDOC_READER,
     "--toc", "--toc-depth=2",
-    "--resource-path", [site.src, ROOT].join(path.delimiter),
+    "--resource-path", [ROOT, site.src].join(path.delimiter),
     "--metadata-file", site.metadata,
     "--output", outPath,
   ];
   if (target === "pdf") {
+    // biome-ignore format: each flag beside its value
     args.push(
       "--pdf-engine", "xelatex",
       // A reading book, not a paper: chapters open on a fresh page, the folder is

@@ -15,6 +15,10 @@ const EXPLICIT_ID_RE = /\{#([^}\s]+)[^}]*\}\s*$/;
 // markdown extension to be read as LaTeX, and every other writer drops it.
 const PAGE_BREAK = "```{=latex}\n\\clearpage\n```";
 const DOCUMENT_HEADING_RE = /^(#{1,6} .*\{#[^}\s]+)\}/;
+const SETEXT_UNDERLINE_RE = /^ {0,3}(=+|-+)[ \t]*$/;
+// Lines that open some other block (heading, quote, table, HTML, list) and so cannot be
+// the text of a setext heading.
+const NOT_HEADING_TEXT_RE = /^(\s{4,}|\s*$|\s*[#>|<]|\s*[-*+]\s|\s*\d+[.)]\s|\s*[-*_=](\s*[-*_=]){2,}\s*$)/;
 
 type Fence = string | null;
 
@@ -48,6 +52,34 @@ export function shiftHeadings(text: string, by = 1): string {
       return "#".repeat(level) + heading[2];
     })
     .join("\n");
+}
+
+/**
+ * Rewrite setext headings (`Title` over `=====` or `-----`) as ATX (`# Title`).
+ *
+ * Every other transform here reads ATX headings only, and normalizeThematicBreaks
+ * would turn a `-----` underline into `***`, leaving the heading as a paragraph over a
+ * rule. GitHub READMEs often use setext, so they are converted first. Matches pandoc's
+ * reading: one line of text, a blank line (or the start) before it, outside fences.
+ */
+export function setextToAtx(text: string): string {
+  const lines = text.split("\n");
+  const out: string[] = [];
+  let fence: Fence = null;
+  for (let i = 0; i < lines.length; i++) {
+    const bare = lines[i];
+    let isFence: boolean;
+    [isFence, fence] = fenceStep(fence, bare);
+    const underline = SETEXT_UNDERLINE_RE.exec(lines[i + 1] ?? "");
+    const blankBefore = i === 0 || lines[i - 1].trim() === "";
+    if (!isFence && fence === null && underline && blankBefore && !NOT_HEADING_TEXT_RE.test(bare)) {
+      out.push(`${underline[1][0] === "=" ? "#" : "##"} ${bare.trim()}`);
+      i++;
+      continue;
+    }
+    out.push(bare);
+  }
+  return out.join("\n");
 }
 
 /** The text of the first level-1 heading outside fenced code, or null if there is none. */

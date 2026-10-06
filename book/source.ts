@@ -3,8 +3,8 @@
  *
  * By default, from the same place the site serves it: the repo and tag named in
  * <site>_www/index.html (scripts/utils/site.ts reads them), shallow-cloned into
- * build/<site>/src/<ref>/. The book is then built from exactly what the site shows.
- * With --src, from a local checkout instead — a working tree, to preview a change
+ * build/<site>/src/<owner>/<repo>/<ref>/. The book is then built from exactly what
+ * the site shows. With --src, from a local checkout instead — a working tree, to preview a change
  * before it is tagged.
  */
 
@@ -16,20 +16,22 @@ import { BUILD, ROOT, relativePosix, type Site } from "./context";
 
 export interface SourceOptions {
   src?: string; // a local checkout of the content repo, used instead of a clone
-  refresh?: boolean; // discard a cached clone and clone again
+  refresh?: boolean; // clone again, replacing a cached clone on success
 }
 
 /**
  * Shallow-clone `owner/repo` at `ref` into `dest`, unless a clone is already there.
  *
- * The clone lands on a partial path and is renamed into place only once complete,
- * so an interrupted clone is never mistaken for a cached one. `ref` must be a tag or
- * a branch: `--branch` takes nothing else, and jsDelivr's version ranges (`@1`,
- * `@latest`) mean nothing to git.
+ * `dest` names owner, repo and ref, so pointing a site at another repo with the same
+ * tag never reuses the old repo's clone. The clone lands on a partial path and is
+ * renamed into place only once complete, so an interrupted clone is never mistaken
+ * for a cached one. With `refresh`, the cached clone is removed only after the new one
+ * has succeeded: a refresh that fails (offline, rate-limited, tag deleted) keeps it.
+ * `ref` must be a tag or a branch: `--branch` takes nothing else, and jsDelivr's
+ * version ranges (`@1`, `@latest`) mean nothing to git.
  */
 function checkout(owner: string, repo: string, ref: string, dest: string, refresh: boolean): string {
-  if (refresh) fs.rmSync(dest, { recursive: true, force: true });
-  if (fs.existsSync(dest)) return dest;
+  if (!refresh && fs.existsSync(dest)) return dest;
   const url = `https://github.com/${owner}/${repo}.git`;
   const partial = `${dest}.part`;
   fs.rmSync(partial, { recursive: true, force: true });
@@ -48,6 +50,7 @@ function checkout(owner: string, repo: string, ref: string, dest: string, refres
         result.stderr.trim(),
     );
   }
+  fs.rmSync(dest, { recursive: true, force: true });
   fs.renameSync(partial, dest);
   return dest;
 }
@@ -68,10 +71,16 @@ export function resolveSite(name: string, options: SourceOptions = {}): Site {
   let src: string;
   if (options.src) {
     src = path.resolve(options.src);
-    if (!fs.statSync(src, { throwIfNoEntry: false })?.isDirectory()) throw new Error(`--src ${options.src} is not a directory`);
+    if (!fs.statSync(src, { throwIfNoEntry: false })?.isDirectory()) {
+      throw new Error(`--src ${options.src} is not a directory`);
+    }
   } else {
-    if (ref.split("/").includes("..")) throw new Error(`ref '${ref}' is not a usable directory name`);
-    src = checkout(owner, repo, ref, path.join(build, "src", ref), options.refresh ?? false);
+    for (const part of [owner, repo, ...ref.split("/")]) {
+      if (!part || part === "." || part === ".." || part.includes("/")) {
+        throw new Error(`'${owner}/${repo}@${ref}' does not make a usable directory name`);
+      }
+    }
+    src = checkout(owner, repo, ref, path.join(build, "src", owner, repo, ref), options.refresh ?? false);
   }
   const docs = path.resolve(src, scope);
   if (!fs.statSync(docs, { throwIfNoEntry: false })?.isDirectory()) {

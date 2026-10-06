@@ -1,12 +1,14 @@
 /// <reference types="node" />
 // Usage: bun scripts/new-site.ts <name> <firebase-site-id> <owner/repo@ref> [--scope docs] [--project parlang]
 //                                [--title T] [--description D] [--keywords a,b] [--book-title T] [--subtitle S]
-//                                [--author A] [--language L] [--book-description D] [--subjects a,b]
+//                                [--author A] [--language L] [--year Y] [--book-description D] [--subjects a,b]
 //
 // Adds a site: <name>_www/ from shared/template/ (every {{placeholder}} filled), a firebase.json
 // hosting entry, and the .firebaserc target mapping <name> to <firebase-site-id> in <project>.
 // Then runs scripts/link-shared.sh, which links shared/www/* into the new folder.
-// Refuses when <name>_www/ or the target already exists. Does not create the Firebase site:
+// Refuses when <name>_www/ or the target already exists, or another target already deploys to
+// <firebase-site-id>. --project may be an alias from .firebaserc "projects"; the target is written
+// under the project id it names, which is where firebase-tools looks. Does not create the Firebase site:
 // `firebase hosting:sites:create <firebase-site-id>` does that, once.
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
@@ -47,7 +49,9 @@ export function templateVars(name: string, repo: string, opts: Record<string, st
     language: opts.language ?? "en-GB",
     year: opts.year ?? String(new Date().getFullYear()),
     bookDescription: opts.bookDescription ?? description,
-    subjectsYaml: subjects.map((s) => `\n  - ${s}`).join(""),
+    // Quoted, like every scalar in book.yaml: a plain YAML scalar breaks on `: ` and is cut
+    // short at ` #`. Values hold no `"` or `\`, so double quotes need no escaping inside.
+    subjectsYaml: subjects.map((s) => `\n  - "${s}"`).join(""),
   };
 }
 
@@ -59,13 +63,13 @@ export function fill(text: string, vars: Record<string, string>, file = "templat
   });
 }
 
-/** Writes every shared/template file, filled, into `dir`. */
+/** Writes every shared/template file, filled, into `dir`. Fills all first, so a failure leaves no folder. */
 export function instantiate(dir: string, vars: Record<string, string>) {
+  const files = fs
+    .readdirSync(TEMPLATE)
+    .map((file) => [file, fill(fs.readFileSync(path.join(TEMPLATE, file), "utf8"), vars, file)]);
   fs.mkdirSync(dir, { recursive: true });
-  for (const file of fs.readdirSync(TEMPLATE)) {
-    const text = fs.readFileSync(path.join(TEMPLATE, file), "utf8");
-    fs.writeFileSync(path.join(dir, file), fill(text, vars, file));
-  }
+  for (const [file, text] of files) fs.writeFileSync(path.join(dir, file), text);
 }
 
 const readJson = (file: string) => JSON.parse(fs.readFileSync(path.join(ROOT, file), "utf8"));
@@ -103,7 +107,9 @@ const KNOWN = [
   "subjects",
 ];
 const USAGE =
-  "usage: bun scripts/new-site.ts <name> <firebase-site-id> <owner/repo@ref> [--scope docs] [--project parlang]";
+  "usage: bun scripts/new-site.ts <name> <firebase-site-id> <owner/repo@ref> [--scope docs] [--project parlang]\n" +
+  "  template: [--title T] [--description D] [--keywords a,b] [--book-title T] [--subtitle S] [--author A]\n" +
+  "            [--language L] [--year Y] [--book-description D] [--subjects a,b]";
 
 function main() {
   const { positional, opts } = parseArgs(process.argv.slice(2));
@@ -114,21 +120,29 @@ function main() {
   if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) throw new Error(`site name "${name}": use lowercase kebab-case`);
   if (!/^[a-z0-9][a-z0-9-]*$/.test(siteId)) throw new Error(`firebase site id "${siteId}": use lowercase kebab-case`);
   if (!/^[\w.-]+\/[\w.-]+@[\w./-]+$/.test(repo)) throw new Error(`repo "${repo}": expected <owner>/<repo>@<ref>`);
-  // Values land in HTML attributes, JSON strings and YAML scalars unescaped; keep them plain.
+  // Values land unescaped in HTML attributes, JSON strings and double-quoted YAML scalars;
+  // these are the characters that would break one of them.
   for (const [k, v] of Object.entries(opts)) {
     if (/["<>&\\\n]/.test(v)) throw new Error(`--${k}: no quotes, <, >, &, \\ or line breaks`);
   }
-  const project = opts.project ?? "parlang";
 
   const dir = path.join(ROOT, `${name}_www`);
   const firebase = readJson("firebase.json");
   const rc = readJson(".firebaserc");
+  // firebase-tools turns `-P <alias>` into the project id before it reads targets, so a
+  // target must sit under the id: `--project default` is written as `parlang`.
+  const asked = opts.project ?? "parlang";
+  const project: string = rc.projects?.[asked] ?? asked;
   if (!firebase.hosting?.[0]) throw new Error("firebase.json has no hosting entry to copy");
   if (fs.existsSync(dir)) throw new Error(`${name}_www/ already exists`);
   if (firebase.hosting.some((h: any) => h.target === name))
     throw new Error(`firebase.json already has target "${name}"`);
   for (const [p, t] of Object.entries<any>(rc.targets ?? {})) {
     if (t?.hosting?.[name]) throw new Error(`.firebaserc already has target "${name}" in project ${p}`);
+    // Two targets on one Firebase site: deploying either would replace the other's release.
+    for (const [target, ids] of Object.entries<any>(t?.hosting ?? {})) {
+      if (ids?.includes?.(siteId)) throw new Error(`firebase site "${siteId}" is already target "${target}" in ${p}`);
+    }
   }
 
   instantiate(dir, templateVars(name, repo, opts));
