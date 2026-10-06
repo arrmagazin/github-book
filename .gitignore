@@ -2,6 +2,6 @@
 *.local.md
 build/
 node_modules
-*_www/dist
+www_*/dist
 .firebase
 firebase-debug*.log

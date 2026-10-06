@@ -2,8 +2,8 @@
 #
 # Usage: scripts/link-shared.sh
 #
-# Spreads shared/www/* into every site: for each <site>_www/ (a folder holding an
-# index.html) and each file in shared/www/, makes <site>_www/<file> a RELATIVE symlink
+# Spreads shared/www/* into every site: for each www_<site>/ (a folder holding an
+# index.html) and each file in shared/www/, makes www_<site>/<file> a RELATIVE symlink
 # to ../shared/www/<file>. The links are committed; git stores them as symlinks, and both
 # firebase deploy and esbuild's dev server follow them. So each shared file has ONE copy.
 #
@@ -15,7 +15,7 @@ set -eu
 
 cd "$(dirname "$0")/.."
 
-for site in *_www; do
+for site in www_*; do
   [ -f "$site/index.html" ] || continue
   for src in shared/www/*; do
     [ -f "$src" ] || continue

@@ -3,10 +3,10 @@
 //                                [--title T] [--description D] [--keywords a,b] [--book-title T] [--subtitle S]
 //                                [--author A] [--language L] [--year Y] [--book-description D] [--subjects a,b]
 //
-// Adds a site: <name>_www/ from shared/template/ (every {{placeholder}} filled), a firebase.json
+// Adds a site: www_<name>/ from shared/template/ (every {{placeholder}} filled), a firebase.json
 // hosting entry, and the .firebaserc target mapping <name> to <firebase-site-id> in <project>.
 // Then runs scripts/link-shared.sh, which links shared/www/* into the new folder.
-// Refuses when <name>_www/ or the target already exists, or another target already deploys to
+// Refuses when www_<name>/ or the target already exists, or another target already deploys to
 // <firebase-site-id>. --project may be an alias from .firebaserc "projects"; the target is written
 // under the project id it names, which is where firebase-tools looks. Does not create the Firebase site:
 // `firebase hosting:sites:create <firebase-site-id>` does that, once.
@@ -126,7 +126,7 @@ function main() {
     if (/["<>&\\\n]/.test(v)) throw new Error(`--${k}: no quotes, <, >, &, \\ or line breaks`);
   }
 
-  const dir = path.join(ROOT, `${name}_www`);
+  const dir = path.join(ROOT, `www_${name}`);
   const firebase = readJson("firebase.json");
   const rc = readJson(".firebaserc");
   // firebase-tools turns `-P <alias>` into the project id before it reads targets, so a
@@ -134,7 +134,7 @@ function main() {
   const asked = opts.project ?? "parlang";
   const project: string = rc.projects?.[asked] ?? asked;
   if (!firebase.hosting?.[0]) throw new Error("firebase.json has no hosting entry to copy");
-  if (fs.existsSync(dir)) throw new Error(`${name}_www/ already exists`);
+  if (fs.existsSync(dir)) throw new Error(`www_${name}/ already exists`);
   if (firebase.hosting.some((h: any) => h.target === name))
     throw new Error(`firebase.json already has target "${name}"`);
   for (const [p, t] of Object.entries<any>(rc.targets ?? {})) {
@@ -150,7 +150,7 @@ function main() {
 
   // Every entry has the same shape; only target and public root differ.
   const [first] = firebase.hosting;
-  firebase.hosting.push({ ...structuredClone(first), target: name, public: `${name}_www` });
+  firebase.hosting.push({ ...structuredClone(first), target: name, public: `www_${name}` });
   writeJson("firebase.json", firebase);
 
   rc.targets ??= {};
@@ -162,7 +162,7 @@ function main() {
   execFileSync(path.join(ROOT, "scripts", "link-shared.sh"), { stdio: "inherit" });
 
   console.log(`✅ Site "${name}" -> ${siteId} (project ${project}), docs from ${repo}`);
-  console.log(`   Next: add ${name}_www/cover.png for the book cover, review ${name}_www/book.yaml,`);
+  console.log(`   Next: add www_${name}/cover.png for the book cover, review www_${name}/book.yaml,`);
   console.log(`   then SITE=${name} npm run dev`);
 }
 

@@ -24,7 +24,7 @@ export const EPUB_CSS = path.join(BOOK_DIR, "epub.css");
 /** One site's book: where its markdown comes from and where its outputs go. All absolute. */
 export interface Site {
   name: string;
-  dir: string; // <site>_www, the site's public root, holding its book inputs
+  dir: string; // www_<site>, the site's public root, holding its book inputs
   src: string; // root of the content repo checkout
   docs: string; // src/<scope>, the markdown the book is made from
   build: string; // build/<site>

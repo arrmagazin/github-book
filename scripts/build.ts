@@ -12,7 +12,7 @@ export async function main(options: any = {}) {
     const { esbuild: packageOptions = {} } = readFileJsonContent([`${process.cwd()}/package.json`]) ?? {};
 
     // One shell, many sites: the same bundle is built into the dist/ of the site SITE names.
-    const outdir = `./${requireSite()}_www/dist`;
+    const outdir = `./www_${requireSite()}/dist`;
 
     const buildOptions = getEsbuildOptions({ outdir, ...packageOptions, ...options });
 

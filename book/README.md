@@ -14,7 +14,7 @@ SITE=engx npm run book -- --refresh           # clone again, replacing the cache
 
 Known state: engx's pinned tag `1.0.1` fails the structure check (two dead glossary links,
 fixed in engx after that tag), so engx builds only with `--src ../engx` until a new tag is
-released and pinned in `engx_www/index.html`.
+released and pinned in `www_engx/index.html`.
 
 With no `SITE`, it builds every site in turn. A site that fails is reported with its name
 and skipped. The other sites still build, and the exit code is 1 at the end.
@@ -23,10 +23,10 @@ and skipped. The other sites still build, and the exit code is 1 at the end.
 
 | What | Where |
 | --- | --- |
-| Source repo, ref, scope | `<site>_www/index.html`, the `const repo` and `const scope` lines, read by `scripts/utils/site.ts` |
+| Source repo, ref, scope | `www_<site>/index.html`, the `const repo` and `const scope` lines, read by `scripts/utils/site.ts` |
 | The markdown | `build/<site>/src/<owner>/<repo>/<ref>/<scope>/`, a shallow clone at that ref, or `--src <dir>/<scope>` |
-| Title, author, rights | `<site>_www/book.yaml`, passed to pandoc as `--metadata-file`. Missing → that site fails |
-| Cover photograph | `<site>_www/cover.png`, PNG only. Missing → no cover, the build continues |
+| Title, author, rights | `www_<site>/book.yaml`, passed to pandoc as `--metadata-file`. Missing → that site fails |
+| Cover photograph | `www_<site>/cover.png`, PNG only. Missing → no cover, the build continues |
 | Outputs | `build/<site>/<site>.md`, `.epub`, `.pdf` |
 | Per-site caches | `build/<site>/cover/`, `build/<site>/epub-default.css` |
 | Shared cache | `build/diagrams/`, content-addressed, so safe across sites |

@@ -1,0 +1,19 @@
+<Component id="Head">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://unpkg.com" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link href="/dist/index.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://unpkg.com/lucide-static@1.17.0/font/lucide.css" />
+    <SEO />
+    <!-- Inline JS is CML text: a bare { } is read as an expression, so no blocks or object
+           literals here. The config comes in as data and is written out by the json pipe. -->
+    <script>// The book's source: a TAGGED release of a public GitHub repo, served by jsDelivr. // The ONE place it is stated: scripts/utils/site.ts (siteSource) parses these two // lines for the book builder too. const repo = '{R.source.owner}/{R.source.repo}@{R.source.ref}'; const scope = "{R.source.scope}"; window.R = {R.bootstrap | json}; if ('serviceWorker' in navigator &amp;&amp; window.location.hostname !== 'localhost') window.addEventListener('load', () => navigator.serviceWorker.register('/service-worker.js'));</script>
+    <Slot />
+  </head>
+</Component>

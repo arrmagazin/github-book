@@ -2,7 +2,7 @@
   "hosting": [
     {
       "target": "engx",
-      "public": "engx_www",
+      "public": "www_engx",
       "ignore": [
         "firebase.json",
         "**/*.js.map",

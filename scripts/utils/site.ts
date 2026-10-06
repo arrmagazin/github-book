@@ -1,5 +1,5 @@
 /// <reference types="node" />
-// Site resolution. A site is a folder `<name>_www/` at the repo root holding an
+// Site resolution. A site is a folder `www_<name>/` at the repo root holding an
 // `index.html`; that folder is the site's Firebase public root. Its index.html is the
 // ONE place the source repo is stated, in two constants of its inline script:
 //
@@ -14,15 +14,15 @@ import { fileURLToPath } from "node:url";
 /** The github-book root, absolute. */
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-const SUFFIX = "_www";
+const PREFIX = "www_";
 
-/** Every site, sorted: each `<name>_www` folder that holds an index.html. */
+/** Every site, sorted: each `www_<name>` folder that holds an index.html. */
 export function sites(): string[] {
   return fs
     .readdirSync(ROOT, { withFileTypes: true })
-    .filter((e) => e.isDirectory() && e.name.endsWith(SUFFIX) && e.name.length > SUFFIX.length)
+    .filter((e) => e.isDirectory() && e.name.startsWith(PREFIX) && e.name.length > PREFIX.length)
     .filter((e) => fs.existsSync(path.join(ROOT, e.name, "index.html")))
-    .map((e) => e.name.slice(0, -SUFFIX.length))
+    .map((e) => e.name.slice(PREFIX.length))
     .sort();
 }
 
@@ -30,9 +30,9 @@ const listing = () => sites().join(", ") || "(none)";
 
 /** The absolute folder of site `name`; throws if no such site exists. */
 export function siteDir(name: string): string {
-  const dir = path.join(ROOT, `${name}${SUFFIX}`);
+  const dir = path.join(ROOT, `${PREFIX}${name}`);
   if (!name || !fs.existsSync(path.join(dir, "index.html"))) {
-    throw new Error(`No site "${name}": expected ${name}${SUFFIX}/index.html. Sites: ${listing()}`);
+    throw new Error(`No site "${name}": expected ${PREFIX}${name}/index.html. Sites: ${listing()}`);
   }
   return dir;
 }

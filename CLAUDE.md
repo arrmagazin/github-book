@@ -9,11 +9,12 @@ content repos own their markdown, their releases and their checkers.
 
 | Path | What it is |
 | --- | --- |
-| `<site>_www/` | One site: its Firebase public root, and the inputs for its book. See **Sites** |
+| `www_<site>/` | One site: its Firebase public root, and the inputs for its book. See **Sites** |
 | `shared/www/` | Files every site serves unchanged. The one copy of each. See **Shared files** |
 | `shared/template/` | Files `new-site` fills in for a new site, with `{{placeholders}}` |
 | `index.ts`, `index.css` | The app shell, the same for every site |
-| `scripts/` | Site tooling: `serve.ts`, `build.ts`, `new-site.ts`, `deploy.sh`, `link-shared.sh`, `link-modules.sh`, `bump-version.sh`, `utils/` |
+| `cml/` | The page-shell templates `gen:index` renders a site's `index.html` from. See **Generating index.html** |
+| `scripts/` | Site tooling: `serve.ts`, `build.ts`, `generateIndexHtml.ts`, `new-site.ts`, `deploy.sh`, `link-shared.sh`, `link-modules.sh`, `bump-version.sh`, `utils/` |
 | `book/` | The book builder. See [book/README.md](book/README.md) |
 | `firebase.json`, `.firebaserc` | Hosting: one entry and one target per site |
 | `build/` | Gitignored: `build/<site>/` per site, `build/diagrams/` shared |
@@ -21,8 +22,8 @@ content repos own their markdown, their releases and their checkers.
 
 ## Sites
 
-A site is a folder `<name>_www/` at the root that holds an `index.html`. The folder name
-minus `_www` is the site name. `scripts/utils/site.ts` is the one place that knows this:
+A site is a folder `www_<name>/` at the root that holds an `index.html`. The folder name
+minus `www_` is the site name. `scripts/utils/site.ts` is the one place that knows this:
 
 | Export | Does |
 | --- | --- |
@@ -47,9 +48,9 @@ A site folder holds:
 `${SITE:?set SITE=<site>}` in `package.json` fails fast when it is unset.
 
 ```sh
-SITE=engx npm run dev        # serve engx_www on :8092 (PORT overrides)
-SITE=engx npm run build      # bundle into engx_www/dist
-SITE=engx npm run deploy     # bump engx_www/version, build, deploy
+SITE=engx npm run dev        # serve www_engx on :8092 (PORT overrides)
+SITE=engx npm run build      # bundle into www_engx/dist
+SITE=engx npm run deploy     # bump www_engx/version, build, deploy
 npm run book                 # every site's book; SITE=engx for one
 ```
 
@@ -57,7 +58,7 @@ npm run book                 # every site's book; SITE=engx for one
 
 `shared/www/` holds files every site serves unchanged (today `service-worker.js`). Each
 is **spread into every site by a relative symlink**, never copied:
-`<site>_www/service-worker.js -> ../shared/www/service-worker.js`.
+`www_<site>/service-worker.js -> ../shared/www/service-worker.js`.
 
 - The links are committed; git stores them as symlinks.
 - firebase-tools follows them on deploy (its `lib/listFiles.js` globs with `follow: true`),
@@ -71,19 +72,19 @@ is **spread into every site by a relative symlink**, never copied:
 
 ## The web app
 
-`index.ts` calls `launchBook()` from `arrmatura-books`, which supplies the whole UI. Do
-**not** add a local `cml/` tree here; UI changes belong in `arrmatura-books`.
-`index.css` is the Tailwind v4 + DaisyUI entry. `scripts/build.ts` bundles into
-`./<SITE>_www/dist`; `scripts/serve.ts` serves `./<SITE>_www` with esbuild and rebuilds
+`index.ts` calls `launchBook()` from `arrmatura-books`, which supplies the whole UI. UI
+changes belong in `arrmatura-books`; the local `cml/` holds only the static page shell
+(see **Generating index.html**). `index.css` is the Tailwind v4 + DaisyUI entry. `scripts/build.ts` bundles into
+`./www_<SITE>/dist`; `scripts/serve.ts` serves `./www_<SITE>` with esbuild and rebuilds
 on change.
 
 **Library links.** `npm install` runs `postinstall` → `link`, which runs
-`scripts/link-modules.sh arrmatura-books ultimus` (symlinks the sibling checkouts
-`../arrmatura-books` and `../ultimus` into `node_modules`), then `link-shared.sh`.
+`scripts/link-modules.sh arrmatura-books arrmatura ultimus` (symlinks the sibling checkouts
+into `node_modules`; `arrmatura` is for `gen:index`), then `link-shared.sh`.
 
 ### The docs come from jsDelivr, not from a local tree
 
-`window.R` in the inline `<script>` of `<site>_www/index.html` is the only config surface.
+`window.R` in the inline `<script>` of `www_<site>/index.html` is the only config surface.
 Two constants above it name the source, and they are the **one place** it is stated:
 
 ```js
@@ -101,6 +102,28 @@ The browser reads them, and so does the book builder, through `siteSource()`. Ke
 lines in that shape (either quote style). So the site, locally too, shows the docs as of
 that tag, not any working tree.
 
+### Generating index.html
+
+`REPO=engx VERSION=1.0.1 npm run gen:index` (or `npm run gen:index:engx`) rewrites
+`www_<REPO>/index.html` from the templates in `cml/`, so the shell and `window.R` cannot
+drift between sites. `REPO` names the site and the content repo, which share the name;
+owner and scope come from the site's current `index.html` (`siteSource`), `VERSION`
+replaces the ref. `window.R.app` is filled from the content repo's `package.json` at that
+tag, fetched from jsDelivr: `name` → `id`, `displayName` → `name`, and `version`,
+`description`, `author`, `keywords`, `email`, `copyright` as they are. The `<meta>` tags
+read the same values.
+
+- `cml/html.xml` is the document frame (`Html`) and the page (`Index`, an empty body);
+  `cml/head.xml` is `Head` and the `SEO` tags. The script runs under
+  `bun --loader .xml:txt`, which imports them as strings.
+- Inline JS in a template is CML text: a bare `{ }` is read as an expression and silently
+  dropped. So the script in `head.xml` has no blocks or object literals; `window.R` comes
+  in as data (`R.bootstrap`) through the `json` pipe, and the `if` is a single statement.
+  `&&` is written `&amp;&amp;`. `htmlStringify` writes `script`/`style` text raw (ultimus);
+  before that fix the same JS came out as `&amp;&amp;`.
+- The generated script still opens with the `const repo` / `const scope` lines, in the
+  shape `siteSource()` parses; the browser does not use them.
+
 ### Cross-document links
 
 Docs link to each other the way they do on GitHub: `sibling.md`, `sub/child.md`,
@@ -114,14 +137,14 @@ and the app is hash-routed, so following one would clobber the current route.
 
 `SITE=<site> npm run deploy`:
 
-1. `predeploy` bumps `<site>_www/version` (`bump-version.sh`) and runs `npm run build`.
+1. `predeploy` bumps `www_<site>/version` (`bump-version.sh`) and runs `npm run build`.
 2. `scripts/deploy.sh <site>` finds the project whose `.firebaserc`
    `targets.<project>.hosting` names `<site>`, then runs
    `firebase deploy --only hosting:<site> --config ./firebase.json -P <project>`.
    Extra args pass through: `./scripts/deploy.sh engx --dry-run`.
 
 - `firebase.json` `hosting` is an **array**, one entry per site:
-  `{ target, public: "<site>_www", ignore, headers, rewrites }`. Every entry has the same
+  `{ target, public: "www_<site>", ignore, headers, rewrites }`. Every entry has the same
   shape; only `target` and `public` differ.
 - `.firebaserc` maps each target to its Firebase site id:
   `targets.parlang.hosting.engx = ["software-engineering"]`.
@@ -140,7 +163,7 @@ and the app is hash-routed, so following one would clobber the current route.
 npm run new-site -- <name> <firebase-site-id> <owner/repo@ref> [--scope docs] [--project parlang]
 ```
 
-It creates `<name>_www/` from `shared/template/` with `version` 0, appends a
+It creates `www_<name>/` from `shared/template/` with `version` 0, appends a
 `firebase.json` entry (a copy of the first, with the new `target` and `public`), adds the
 `.firebaserc` target, and runs `link-shared.sh`. It refuses if the folder or the target
 already exists, or if another target already deploys to `<firebase-site-id>` (deploying
@@ -157,7 +180,7 @@ anything else, `: ` and `#` included, is safe.
 Then, by hand:
 
 - `firebase hosting:sites:create <firebase-site-id>`, once; `new-site` writes config only.
-- Add `<name>_www/cover.png` for the book cover.
+- Add `www_<name>/cover.png` for the book cover.
 - Review `index.html` and `book.yaml`. The template carries fixed values copied from engx:
   author `Company, Inc`, the contact email, `© 2025`, `"version": "1.0.0"`,
   `data-theme="corporate"`, theme colour `#1060c8`, and engx's favicon.
@@ -167,7 +190,8 @@ Then, by hand:
 The site shows a tag, so a doc change goes live in three steps:
 
 1. In the content repo: commit, push, and release a new tag. jsDelivr serves tags.
-2. Here: set `const repo = '<owner>/<repo>@<new-tag>'` in `<site>_www/index.html`.
+2. Here: `REPO=<site> VERSION=<new-tag> npm run gen:index` rewrites `www_<site>/index.html`
+   (or set `const repo = '<owner>/<repo>@<new-tag>'` by hand).
 3. `SITE=<site> npm run deploy`.
 
 The book follows the same line: `SITE=<site> npm run book` clones the new tag.
@@ -183,7 +207,7 @@ The book follows the same line: `SITE=<site> npm run book` clones the new tag.
 - Outputs: `build/<site>/<site>.md`, `.epub`, `.pdf`. Diagrams cache in `build/diagrams/`.
 - Needs pandoc, xelatex (PDF), git, npx (mermaid) and Chrome (cover). Missing `book.yaml`
   fails that site; missing `cover.png` or Chrome only drops the cover.
-- Known state: `arrmagazin/engx@1.0.1`, the tag `engx_www` pins, fails the structure check
+- Known state: `arrmagazin/engx@1.0.1`, the tag `www_engx` pins, fails the structure check
   (two links to `#glossary--delivery` and `#glossary--solution`; engx fixed them after the
   tag). Until a new tag is released and pinned, build engx from its working tree:
   `SITE=engx npm run book -- --src ../engx`.

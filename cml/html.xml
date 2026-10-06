@@ -1,0 +1,21 @@
+<Components>
+
+  <!-- The document frame every page of a site shares. -->
+  <Component id="Html">
+    <html lang="en" data-theme="corporate">
+      <Head>
+        <Slot Key="head" />
+      </Head>
+      <body class="{bodyClass}">
+        <Slot />
+      </body>
+      <script src="/dist/index.js" type="module" If="!static"></script>
+    </html>
+  </Component>
+
+  <!-- The app shell: an empty body that launchBook() fills in the browser. -->
+  <Component id="Index">
+    <Html />
+  </Component>
+
+</Components>

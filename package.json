@@ -11,15 +11,17 @@
     "start:css": "npm run build:css -- --watch",
     "start:open": "npx --yes wait-on http://localhost:${PORT:?no port} && open http://localhost:${PORT:?no port}/",
     "stop": "lsof -t -sTCP:LISTEN -i tcp:${PORT:-8092} | xargs -r kill -9",
+    "gen:index:engx": "REPO=engx VERSION=1.0.1 npm run gen:index",
+    "gen:index": "bun --loader .xml:txt ./scripts/generateIndexHtml.ts \"${REPO:?set REPO=<site>}\" ${VERSION}",
     "build": "npx --yes npm-run-all --parallel build:*",
     "build:ts": "bun ./scripts/build.ts",
-    "build:css": "npx --yes @tailwindcss/cli -i index.css -o \"./${SITE:?set SITE=<site>}_www/dist/index.css\"",
+    "build:css": "npx --yes @tailwindcss/cli -i index.css -o \"./www_${SITE:?set SITE=<site>}/dist/index.css\"",
     "book": "bun ./book/build.ts",
-    "predeploy": "./scripts/bump-version.sh \"./${SITE:?set SITE=<site>}_www/version\" && npm run build",
+    "predeploy": "./scripts/bump-version.sh \"./www_${SITE:?set SITE=<site>}/version\" && npm run build",
     "deploy": "./scripts/deploy.sh \"${SITE:?set SITE=<site>}\"",
     "new-site": "bun ./scripts/new-site.ts",
     "postinstall": "npm run link",
-    "link": "./scripts/link-modules.sh arrmatura-books ultimus && ./scripts/link-shared.sh"
+    "link": "./scripts/link-modules.sh arrmatura-books arrmatura ultimus && ./scripts/link-shared.sh"
   },
   "devDependencies": {
     "@types/node": "^26.5.1"

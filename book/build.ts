@@ -36,7 +36,7 @@ const USAGE = `usage: [SITE=<site>] bun book/build.ts [--epub] [--pdf] [--markdo
   --pdf        build the PDF only
   --markdown   assemble build/<site>/<site>.md and stop
   --src <dir>  read the markdown from a local checkout instead of cloning
-               the tag in <site>_www/index.html (needs a single SITE)
+               the tag in www_<site>/index.html (needs a single SITE)
   --refresh    clone again, replacing the cached clone once the new one succeeds`;
 
 interface Options extends SourceOptions {
@@ -122,7 +122,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
     fail(`--src needs a single site: SITE=<site> bun book/build.ts --src ${options.src}`);
   }
   const names = process.env.SITE ? [requireSite()] : sites();
-  if (!names.length) fail("no sites: expected at least one <site>_www/index.html");
+  if (!names.length) fail("no sites: expected at least one www_<site>/index.html");
 
   if (!options.markdownOnly && spawnSync("pandoc", ["--version"]).error) {
     fail("pandoc is not installed: brew install pandoc");

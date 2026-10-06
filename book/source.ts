@@ -2,7 +2,7 @@
  * Where a site's markdown comes from.
  *
  * By default, from the same place the site serves it: the repo and tag named in
- * <site>_www/index.html (scripts/utils/site.ts reads them), shallow-cloned into
+ * www_<site>/index.html (scripts/utils/site.ts reads them), shallow-cloned into
  * build/<site>/src/<owner>/<repo>/<ref>/. The book is then built from exactly what
  * the site shows. With --src, from a local checkout instead — a working tree, to preview a change
  * before it is tagged.

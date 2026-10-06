@@ -12,7 +12,7 @@ export async function main(options: any = {}) {
 
     const {
       entryPoints = esBuildPackageOpions?.entryPoints,
-      servedir = `./${site}_www`,
+      servedir = `./www_${site}`,
       fallback = `${servedir}/index.html`,
       port = parseInt(process.env.PORT ?? "8080", 10),
       host = process.env.HOST ?? "localhost",

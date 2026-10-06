@@ -7,7 +7,7 @@ every site.
 
 | Site | Folder | URL | Content |
 | --- | --- | --- | --- |
-| `engx` | [engx_www/](engx_www/) | <https://software-engineering.web.app> | [arrmagazin/engx](https://github.com/arrmagazin/engx) |
+| `engx` | [www_engx/](www_engx/) | <https://software-engineering.web.app> | [arrmagazin/engx](https://github.com/arrmagazin/engx) |
 
 ## How it fits together
 
@@ -16,10 +16,10 @@ github.com/<owner>/<repo>@<tag>/<scope>/*.md
         │                         │
    jsDelivr (browser)       git clone (book build)
         │                         │
-  <site>_www/  ── Firebase    build/<site>/<site>.epub, .pdf
+  www_<site>/  ── Firebase    build/<site>/<site>.epub, .pdf
 ```
 
-- **A site** is a folder `<site>_www/`: the Firebase public root. Its `index.html` names
+- **A site** is a folder `www_<site>/`: the Firebase public root. Its `index.html` names
   the content repo and tag in one line, `const repo = '<owner>/<repo>@<tag>'`, and the
   folder inside it in another, `const scope = "docs"`. Both the site and the book builder
   read those lines.
@@ -44,8 +44,9 @@ SITE=engx npm run dev        # serves engx on http://localhost:8092
 | Command | What it does |
 | --- | --- |
 | `SITE=<site> npm run dev` | Serves the site on :8092 (`PORT` overrides), opens a browser |
-| `SITE=<site> npm run build` | Bundles the app and CSS into `<site>_www/dist` |
-| `SITE=<site> npm run deploy` | Bumps `<site>_www/version`, builds, deploys that site's hosting |
+| `SITE=<site> npm run build` | Bundles the app and CSS into `www_<site>/dist` |
+| `SITE=<site> npm run deploy` | Bumps `www_<site>/version`, builds, deploys that site's hosting |
+| `REPO=<site> VERSION=<tag> npm run gen:index` | Rewrites `www_<site>/index.html` from `cml/`, `window.R.app` from the content repo's `package.json` at that tag |
 | `npm run stop` | Frees the port |
 | `npm run book` | Builds every site's book; `SITE=<site>` for one |
 | `npm run new-site -- …` | Adds a site (see below) |
@@ -64,10 +65,10 @@ SITE=engx npm run book -- --src ../engx    # from a local checkout, before taggi
 The builder clones each site's tag into `build/<site>/src/` and writes
 `build/<site>/<site>.epub` and `.pdf`. It needs `pandoc`, and the PDF also needs
 `xelatex`; `--markdown` assembles and checks the structure without rendering either.
-Title, author and rights come from `<site>_www/book.yaml`; the cover is generated from
-them over `<site>_www/cover.png`. Details: [book/README.md](book/README.md).
+Title, author and rights come from `www_<site>/book.yaml`; the cover is generated from
+them over `www_<site>/cover.png`. Details: [book/README.md](book/README.md).
 
-> Known state: `engx_www` pins `arrmagazin/engx@1.0.1`, which fails the structure check
+> Known state: `www_engx` pins `arrmagazin/engx@1.0.1`, which fails the structure check
 > (two dead glossary links, fixed in engx after that tag), so `npm run book` reports
 > `failed: engx`. Until a new tag is released and pinned, use
 > `SITE=engx npm run book -- --src ../engx`.
@@ -79,15 +80,15 @@ npm run new-site -- clean-code clean-code-book someone/clean-code@v1.0.0 --title
 firebase hosting:sites:create clean-code-book
 ```
 
-That creates `clean-code_www/` from [shared/template/](shared/template/), adds its
+That creates `www_clean-code/` from [shared/template/](shared/template/), adds its
 `firebase.json` entry and `.firebaserc` target, and links the shared files. Then add
-`clean-code_www/cover.png`, review `index.html` and `book.yaml`, and run
+`www_clean-code/cover.png`, review `index.html` and `book.yaml`, and run
 `SITE=clean-code npm run dev`.
 
 ## Publish doc changes
 
 1. In the content repo: commit, push, release a new tag.
-2. Here: set that tag in `const repo` in `<site>_www/index.html`.
+2. Here: `REPO=<site> VERSION=<tag> npm run gen:index` rewrites `www_<site>/index.html`.
 3. `SITE=<site> npm run deploy`.
 
 Agent and maintainer notes are in [CLAUDE.md](CLAUDE.md).
