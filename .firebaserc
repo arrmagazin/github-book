@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "parlang"
+  },
+  "targets": {
+    "parlang": {
+      "hosting": {
+        "engx": [
+          "software-engineering"
+        ]
+      }
+    }
+  }
+}

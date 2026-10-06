@@ -1,0 +1,1 @@
+../shared/www/service-worker.js

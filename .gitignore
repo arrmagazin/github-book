@@ -1,0 +1,6 @@
+.DS_Store
+*.local.md
+build/
+node_modules
+*_www/dist
+.firebase

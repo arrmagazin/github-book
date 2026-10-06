@@ -1,0 +1,16 @@
+# Book metadata for book/build.ts. Pandoc reads this for both formats.
+title: Introduction into Software Engineering
+subtitle: The distilled knowledge for practising engineers
+author: Irvin Oldman
+language: en-GB
+rights: © 2026 Irvin Oldman. All rights reserved.
+description: >-
+  A reference book covering the most fields of knowledge every Software engineer must know.
+subject:
+  - Software engineering
+  - System design
+  - Cloud computing
+# Fill this in before publishing:
+# identifier:
+#   - scheme: ISBN
+#     text: 978-0-000000-00-0

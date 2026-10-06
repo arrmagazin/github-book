@@ -1,0 +1,32 @@
+{
+  "hosting": [
+    {
+      "target": "engx",
+      "public": "engx_www",
+      "ignore": [
+        "firebase.json",
+        "**/*.js.map",
+        "**/.*",
+        "book.yaml",
+        "cover.png"
+      ],
+      "headers": [
+        {
+          "source": "version",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-store"
+            }
+          ]
+        }
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    }
+  ]
+}

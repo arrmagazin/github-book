@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="corporate">
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://unpkg.com" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="manifest" href="/site.webmanifest" />
+  <link href="/dist/index.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/lucide-static@1.17.0/font/lucide.css" />
+  <title>{{title}}</title>
+  <meta name="title" />
+  <meta name="description" content="{{description}}" />
+  <meta name="keywords" content="{{keywordsMeta}}" />
+  <meta name="robots" content="index, follow" />
+  <meta name="language" content="English" />
+  <meta name="author" content="Company, Inc" />
+  <link rel="canonical" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" />
+  <meta property="og:title" />
+  <meta property="og:description" content="{{description}}" />
+  <meta property="og:image" />
+  <meta property="og:site_name" content="{{title}}" />
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" />
+  <meta property="twitter:title" />
+  <meta property="twitter:description" content="{{title}} - {{description}}" />
+  <meta property="twitter:image" />
+  <meta name="theme-color" content="#1060c8" />
+  <meta name="format-detection" content="telephone=no" />
+  <script>
+    // The book's source: a TAGGED release of a public GitHub repo, served by jsDelivr.
+    // The ONE place it is stated: the book builder (book/build.ts) parses these two lines too.
+    const repo = '{{repo}}';
+    const scope = "{{scope}}";
+    window.R = {
+      "app": {
+        "id": "{{name}}",
+        "name": "{{title}}",
+        "logo": "/favicon.svg",
+        "version": "1.0.0",
+        "description": "{{title}} - {{description}}",
+        "author": "Company, Inc",
+        "keywords": {{keywordsJson}},
+        "email": "contact@company.com",
+        "copyright": "© 2025. All rights reserved."
+      },
+      "book": {
+        "indexUrl": "https://data.jsdelivr.com/v1/packages/gh/"+repo+"?structure=tree",
+        "docUrl": "https://cdn.jsdelivr.net/gh/"+repo+"/"+scope+"/*",
+        scope,
+      }
+    }
+  </script>
+  <script>
+    if ('serviceWorker' in navigator && window.location.hostname !== 'localhost') {
+      window.addEventListener('load', () => navigator.serviceWorker.register('/service-worker.js'));
+    }
+  </script>
+</head>
+
+<body></body>
+<script src="/dist/index.js" type="module"></script>
+
+</html>

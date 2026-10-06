@@ -1,0 +1,13 @@
+# Book metadata for book/build.ts. Pandoc reads this for both formats.
+title: {{bookTitle}}
+subtitle: {{subtitle}}
+author: {{author}}
+language: {{language}}
+rights: © {{year}} {{author}}. All rights reserved.
+description: >-
+  {{bookDescription}}
+subject:{{subjectsYaml}}
+# Fill this in before publishing:
+# identifier:
+#   - scheme: ISBN
+#     text: 978-0-000000-00-0

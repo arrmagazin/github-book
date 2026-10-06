@@ -1,0 +1,194 @@
+# github-book
+
+One repo that hosts **many book sites**. Each site shows a book whose markdown lives in a
+**public GitHub repo**, served by jsDelivr at a tag. The same repo builds each site's book
+as an EPUB and a PDF from that repo's content. This repo holds no book content of its own:
+content repos own their markdown, their releases and their checkers.
+
+## Structure
+
+| Path | What it is |
+| --- | --- |
+| `<site>_www/` | One site: its Firebase public root, and the inputs for its book. See **Sites** |
+| `shared/www/` | Files every site serves unchanged. The one copy of each. See **Shared files** |
+| `shared/template/` | Files `new-site` fills in for a new site, with `{{placeholders}}` |
+| `index.ts`, `index.css` | The app shell, the same for every site |
+| `scripts/` | Site tooling: `serve.ts`, `build.ts`, `new-site.ts`, `deploy.sh`, `link-shared.sh`, `link-modules.sh`, `bump-version.sh`, `utils/` |
+| `book/` | The book builder. See [book/README.md](book/README.md) |
+| `firebase.json`, `.firebaserc` | Hosting: one entry and one target per site |
+| `build/` | Gitignored: `build/<site>/` per site, `build/diagrams/` shared |
+| `tsconfig.json`, `biome.json` | TypeScript and lint config. biome skips `firebase.json` and `.firebaserc`, which `new-site` writes with `JSON.stringify` |
+
+## Sites
+
+A site is a folder `<name>_www/` at the root that holds an `index.html`. The folder name
+minus `_www` is the site name. `scripts/utils/site.ts` is the one place that knows this:
+
+| Export | Does |
+| --- | --- |
+| `sites()` | Every site, sorted |
+| `siteDir(name)` | The site's folder; throws if there is no such site |
+| `requireSite()` | The site named by env `SITE`; exits with the list of sites if unset or unknown |
+| `siteSource(name)` | `{ owner, repo, ref, scope }`, parsed from the site's `index.html` |
+
+A site folder holds:
+
+| File | Served | Purpose |
+| --- | --- | --- |
+| `index.html` | yes | Page shell and `window.R`, the app's one config surface |
+| `favicon.svg`, `site.webmanifest` | yes | Icon and PWA manifest |
+| `version` | yes | Deploy counter; the service worker's cache key. Never hand-edit |
+| `service-worker.js` | yes | Symlink to `../shared/www/service-worker.js` |
+| `dist/` | yes | The bundle, built per site. Gitignored |
+| `book.yaml` | no | pandoc metadata for the book: title, subtitle, author, rights |
+| `cover.png` | no | The book cover's photograph. Optional |
+
+**`SITE` picks the site** for every per-site command. npm runs scripts with `sh`, and
+`${SITE:?set SITE=<site>}` in `package.json` fails fast when it is unset.
+
+```sh
+SITE=engx npm run dev        # serve engx_www on :8092 (PORT overrides)
+SITE=engx npm run build      # bundle into engx_www/dist
+SITE=engx npm run deploy     # bump engx_www/version, build, deploy
+npm run book                 # every site's book; SITE=engx for one
+```
+
+## Shared files
+
+`shared/www/` holds files every site serves unchanged (today `service-worker.js`). Each
+is **spread into every site by a relative symlink**, never copied:
+`<site>_www/service-worker.js -> ../shared/www/service-worker.js`.
+
+- The links are committed; git stores them as symlinks.
+- firebase-tools follows them on deploy (its `lib/listFiles.js` globs with `follow: true`),
+  and esbuild's dev server follows them too.
+- `scripts/link-shared.sh` makes the links. For every site and every file in `shared/www/`:
+  creates a missing link, fixes one that points elsewhere, and **skips a real file** with
+  a note. It is idempotent. `npm install` (via `postinstall` → `link`) and `new-site` run it.
+- A site that needs its own version of a shared file replaces the link with a real file.
+  The spreader then leaves it alone.
+- To share a new file: put it in `shared/www/`, run `npm run link`, commit the links.
+
+## The web app
+
+`index.ts` calls `launchBook()` from `arrmatura-books`, which supplies the whole UI. Do
+**not** add a local `cml/` tree here; UI changes belong in `arrmatura-books`.
+`index.css` is the Tailwind v4 + DaisyUI entry. `scripts/build.ts` bundles into
+`./<SITE>_www/dist`; `scripts/serve.ts` serves `./<SITE>_www` with esbuild and rebuilds
+on change.
+
+**Library links.** `npm install` runs `postinstall` → `link`, which runs
+`scripts/link-modules.sh arrmatura-books ultimus` (symlinks the sibling checkouts
+`../arrmatura-books` and `../ultimus` into `node_modules`), then `link-shared.sh`.
+
+### The docs come from jsDelivr, not from a local tree
+
+`window.R` in the inline `<script>` of `<site>_www/index.html` is the only config surface.
+Two constants above it name the source, and they are the **one place** it is stated:
+
+```js
+const repo = 'arrmagazin/engx@1.0.1';   // <owner>/<repo>@<ref>
+const scope = "docs";                   // the repo folder holding the markdown
+...
+"book": {
+  "indexUrl": "https://data.jsdelivr.com/v1/packages/gh/"+repo+"?structure=tree",
+  "docUrl": "https://cdn.jsdelivr.net/gh/"+repo+"/"+scope+"/*",
+  scope,
+}
+```
+
+The browser reads them, and so does the book builder, through `siteSource()`. Keep both
+lines in that shape (either quote style). So the site, locally too, shows the docs as of
+that tag, not any working tree.
+
+### Cross-document links
+
+Docs link to each other the way they do on GitHub: `sibling.md`, `sub/child.md`,
+`../other-dir/doc.md`. `DocsService.gotoLocalLink` resolves each href against the document
+it appears in and matches the result against the file tree, so all of them navigate
+in-app. A `.md` target missing from the tree logs `No such document: …` rather than
+opening a dead tab. Bare `#anchor` links do nothing: the renderer emits no heading ids,
+and the app is hash-routed, so following one would clobber the current route.
+
+## Deploy
+
+`SITE=<site> npm run deploy`:
+
+1. `predeploy` bumps `<site>_www/version` (`bump-version.sh`) and runs `npm run build`.
+2. `scripts/deploy.sh <site>` finds the project whose `.firebaserc`
+   `targets.<project>.hosting` names `<site>`, then runs
+   `firebase deploy --only hosting:<site> --config ./firebase.json -P <project>`.
+   Extra args pass through: `./scripts/deploy.sh engx --dry-run`.
+
+- `firebase.json` `hosting` is an **array**, one entry per site:
+  `{ target, public: "<site>_www", ignore, headers, rewrites }`. Every entry has the same
+  shape; only `target` and `public` differ.
+- `.firebaserc` maps each target to its Firebase site id:
+  `targets.parlang.hosting.engx = ["software-engineering"]`.
+- `ignore` drops `book.yaml` and `cover.png` (book inputs are not served), source maps and
+  dotfiles.
+- `service-worker.js` derives its cache name from `/version`, so the bump is what
+  invalidates stale client caches. Never hand-edit `version`.
+- `version` needs its `no-store` header (in `firebase.json`) and must not be named
+  `.version`: the `**/.*` ignore would silently drop it.
+- `** -> /index.html` rewrite: every path serves the app.
+- Port 8092 by default; `npm run stop` frees it. 8091 is the almaat site.
+
+## Add a site
+
+```sh
+npm run new-site -- <name> <firebase-site-id> <owner/repo@ref> [--scope docs] [--project parlang]
+```
+
+It creates `<name>_www/` from `shared/template/` with `version` 0, appends a
+`firebase.json` entry (a copy of the first, with the new `target` and `public`), adds the
+`.firebaserc` target, and runs `link-shared.sh`. It refuses if the folder or the target
+already exists. Optional flags fill the template: `--title`, `--description`,
+`--keywords a,b`, `--book-title`, `--subtitle`, `--author`, `--language`, `--year`,
+`--book-description`, `--subjects a,b`. Values may not contain `"`, `<`, `>`, `&`, `\` or
+line breaks, because they are written in unescaped.
+
+Then, by hand:
+
+- `firebase hosting:sites:create <firebase-site-id>`, once; `new-site` writes config only.
+- Add `<name>_www/cover.png` for the book cover.
+- Review `index.html` and `book.yaml`. The template carries fixed values copied from engx:
+  author `Company, Inc`, the contact email, `© 2025`, `"version": "1.0.0"`,
+  `data-theme="corporate"`, theme colour `#1060c8`, and engx's favicon.
+
+## Publish doc changes
+
+The site shows a tag, so a doc change goes live in three steps:
+
+1. In the content repo: commit, push, and release a new tag. jsDelivr serves tags.
+2. Here: set `const repo = '<owner>/<repo>@<new-tag>'` in `<site>_www/index.html`.
+3. `SITE=<site> npm run deploy`.
+
+The book follows the same line: `SITE=<site> npm run book` clones the new tag.
+
+## The book
+
+`npm run book` builds every site's book; `SITE=<site>` builds one. Flags: `--epub`,
+`--pdf`, `--markdown`, `--src <dir>` (a local checkout, one site only), `--refresh`.
+
+- Source: `siteSource()` gives repo, ref and scope; the builder shallow-clones the ref into
+  `build/<site>/src/<ref>/` and reuses it until `--refresh`. The ref must be an exact tag
+  or branch, not a jsDelivr range.
+- Outputs: `build/<site>/<site>.md`, `.epub`, `.pdf`. Diagrams cache in `build/diagrams/`.
+- Needs pandoc, xelatex (PDF), git, npx (mermaid) and Chrome (cover). Missing `book.yaml`
+  fails that site; missing `cover.png` or Chrome only drops the cover.
+
+Why it does what it does (titles, reading order, page breaks, ids, links, `---`, mermaid,
+cover, void tags, image formats, table rules, callouts, PDF layout) is in
+[book/README.md](book/README.md). Read it before changing `book/`, and keep it in step.
+
+## Working conventions
+
+- Plain standard English in docs and comments; no rare words, no idioms.
+- `book/` uses Node built-ins only and runs on bun. Keep its modules near 250 lines, split
+  by concern, and keep the comments that carry the reasons.
+- Nothing in `book/` or `scripts/` hard-codes one site. Per-site paths come from `SITE`,
+  `siteDir()` or the book's `Site` object.
+- One copy of each idea: a file every site serves goes in `shared/www/` and is linked;
+  the source repo is stated only in `index.html`.
+- No `release` or checker scripts here: content repos own those.
