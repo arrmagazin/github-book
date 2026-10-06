@@ -31,7 +31,7 @@ const listing = () => sites().join(", ") || "(none)";
 /** The absolute folder of site `name`; throws if no such site exists. */
 export function siteDir(name: string): string {
   const dir = path.join(ROOT, `${PREFIX}${name}`);
-  if (!name || !fs.existsSync(path.join(dir, "index.html"))) {
+  if (!name || !fs.existsSync(path.join(dir))) {
     throw new Error(`No site "${name}": expected ${PREFIX}${name}/index.html. Sites: ${listing()}`);
   }
   return dir;
@@ -51,19 +51,4 @@ export function requireSite(): string {
     process.exit(1);
   }
   return name;
-}
-
-// `const repo = '<owner>/<repo>@<ref>'` and `const scope = "<dir>"`, either quote style.
-const REPO_RE = /const\s+repo\s*=\s*(["'])([^"'/\s]+)\/([^"'@\s]+)@([^"'\s]+)\1/;
-const SCOPE_RE = /const\s+scope\s*=\s*(["'])([^"']*)\1/;
-
-/** Where site `name` takes its markdown from, parsed from its index.html. */
-export function siteSource(name: string): { owner: string; repo: string; ref: string; scope: string } {
-  const file = path.join(siteDir(name), "index.html");
-  const html = fs.readFileSync(file, "utf8");
-  const repo = html.match(REPO_RE);
-  if (!repo) throw new Error(`${file}: no  const repo = '<owner>/<repo>@<ref>'`);
-  const scope = html.match(SCOPE_RE);
-  if (!scope) throw new Error(`${file}: no  const scope = "<dir>"`);
-  return { owner: repo[2], repo: repo[3], ref: repo[4], scope: scope[2] };
 }

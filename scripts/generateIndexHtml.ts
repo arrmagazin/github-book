@@ -10,11 +10,13 @@
 
 import * as path from "node:path";
 import { applyTemplate } from "arrmatura";
-import { htmlStringify, join } from "ultimus";
+import { htmlStringify, join, stringifyJson } from "ultimus";
 import head from "../cml/head.xml";
 import html from "../cml/html.xml";
+import seo from "../cml/seo.xml";
+import indexApp from "../cml/index.xml";
 import { writeFileContent } from "./utils/files";
-import { siteDir, siteSource } from "./utils/site";
+import { siteDir } from "./utils/site";
 
 type Source = { owner: string; repo: string; ref: string; scope: string };
 
@@ -57,10 +59,9 @@ export function bootstrap(source: Source, app: object) {
 }
 
 /** The `json` pipe: a value as a JSON literal, indented to sit inside the script. */
-const json = (x: unknown) => JSON.stringify(x, null, 2).replaceAll("\n", "\n        ");
+const json = (x: unknown) => stringifyJson(x).replaceAll("\n", "\n        ");
 
-export async function main({ repo, version }: { repo: string; version?: string }) {
-  const source = { ...siteSource(repo), ...(version ? { ref: version } : {}) };
+export async function main(source: Source) {
   const url = docUrl(source, "package.json");
   const app = appResources(await fetchJson(url));
 
@@ -69,7 +70,7 @@ export async function main({ repo, version }: { repo: string; version?: string }
     source,
     bootstrap: bootstrap(source, app),
     functions: { join, json },
-    components: [html, head],
+    components: [html, head, seo, indexApp],
   };
   const root = applyTemplate(`<Index/>`, config);
 
@@ -78,8 +79,10 @@ export async function main({ repo, version }: { repo: string; version?: string }
   console.log(`✅ ${path.relative(process.cwd(), file)} ← ${url}`);
 }
 
-const [repo, version] = process.argv.slice(2);
-main({ repo, version }).catch((err) => {
+const [owner, repo, ref, scope] = process.argv[2].split("/");
+
+const source = { owner, repo, ref, scope };
+main(source).catch((err) => {
   console.error(`❌ ${err.message}`);
   process.exit(1);
 });
