@@ -21,8 +21,8 @@ const filters = [
   { ttl: 365 * DAY_MS, match: (url) => url.startsWith("https://fonts.gstatic.com/") },
   { ttl: 7 * DAY_MS, match: (url) => url.startsWith("https://unpkg.com/l") },
   { ttl: 7 * DAY_MS, match: (url) => url.endsWith("lucide.css") },
-  { ttl: DAY_MS, match: (url) => url.startsWith("https://raw.githubusercontent.com/") },
-  { ttl: DAY_MS, match: (url) => url.startsWith("https://api.github.com/repos/") },
+  { ttl: DAY_MS, match: (url) => url.startsWith("https://data.jsdelivr.com/v1/") },
+  { ttl: DAY_MS, match: (url) => url.startsWith("https://cdn.jsdelivr.net/gh/") },
   {
     ttl: 365 * DAY_MS,
     match: (_url, headers) => headers.has("content-type") && headers.get("content-type").match(/^font\//i),
