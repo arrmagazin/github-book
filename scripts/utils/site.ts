@@ -1,10 +1,11 @@
 /// <reference types="node" />
 // Site resolution. A site is a folder `www_<name>/` at the repo root holding an
 // `index.html`; that folder is the site's Firebase public root. Its index.html is the
-// ONE place the source repo is stated, in two constants of its inline script:
+// ONE place the source repo is stated, in `window.R.book` (the `<script id="R">` JSON
+// that scripts/generateIndexHtml.ts writes):
 //
-//   const repo = 'arrmagazin/engx@1.0.1';   // <owner>/<repo>@<ref>, the tag jsDelivr serves
-//   const scope = "docs";                   // the folder of the repo holding the markdown
+//   "indexUrl": "https://data.jsdelivr.com/v1/packages/gh/<owner>/<repo>@<ref>?structure=tree",
+//   "scope": "docs"                         // the folder of the repo holding the markdown
 //
 // The web app reads them in the browser; the book builder reads them here.
 import * as fs from "node:fs";
@@ -51,4 +52,20 @@ export function requireSite(): string {
     process.exit(1);
   }
   return name;
+}
+
+// The config script, and the jsDelivr listing URL inside it that names the repo and ref.
+const R_RE = /<script id="R" type="application\/json">([\s\S]*?)<\/script>/;
+const INDEX_URL_RE = /\/gh\/([^/@\s]+)\/([^/@\s]+)@([^?\s]+)\?/;
+
+/** Where site `name` takes its markdown from, parsed from `window.R.book` in its index.html. */
+export function siteSource(name: string): { owner: string; repo: string; ref: string; scope: string } {
+  const file = path.join(siteDir(name), "index.html");
+  const json = fs.readFileSync(file, "utf8").match(R_RE);
+  if (!json) throw new Error(`${file}: no <script id="R" type="application/json">`);
+  const { indexUrl = "", scope } = JSON.parse(json[1]).book ?? {};
+  const repo = indexUrl.match(INDEX_URL_RE);
+  if (!repo) throw new Error(`${file}: R.book.indexUrl does not name <owner>/<repo>@<ref>`);
+  if (typeof scope !== "string") throw new Error(`${file}: no R.book.scope`);
+  return { owner: repo[1], repo: repo[2], ref: repo[3], scope };
 }

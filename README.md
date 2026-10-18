@@ -8,6 +8,7 @@ every site.
 | Site | Folder | URL | Content |
 | --- | --- | --- | --- |
 | `engx` | [www_engx/](www_engx/) | <https://software-engineering.web.app> | [arrmagazin/engx](https://github.com/arrmagazin/engx) |
+| `almaat` | [www_almaat/](www_almaat/) | <https://almaat.web.app> | [arrmagazin/almaat](https://github.com/arrmagazin/almaat) |
 
 ## How it fits together
 
@@ -20,12 +21,11 @@ github.com/<owner>/<repo>@<tag>/<scope>/*.md
 ```
 
 - **A site** is a folder `www_<site>/`: the Firebase public root. Its `index.html` names
-  the content repo and tag in one line, `const repo = '<owner>/<repo>@<tag>'`, and the
-  folder inside it in another, `const scope = "docs"`. Both the site and the book builder
-  read those lines.
+  the content repo, tag and folder in its `window.R.book` block (`indexUrl`, `scope`),
+  generated from `cml/`. Both the site and the book builder read that block.
 - **Shared files** live once in [shared/www/](shared/www/) and are spread into every site
-  by relative symlinks, so each site's `service-worker.js` is a link to
-  `../shared/www/service-worker.js`. A site that needs its own version replaces the link
+  by relative symlinks, so each site's `service-worker.js` and `onload.js` are links
+  into `../shared/www/`. A site that needs its own version replaces the link
   with a real file.
 - **The UI** is `arrmatura-books`, a sibling checkout; `index.ts` only calls `launchBook()`.
 
@@ -46,7 +46,7 @@ SITE=engx npm run dev        # serves engx on http://localhost:8092
 | `SITE=<site> npm run dev` | Serves the site on :8092 (`PORT` overrides), opens a browser |
 | `SITE=<site> npm run build` | Bundles the app and CSS into `www_<site>/dist` |
 | `SITE=<site> npm run deploy` | Bumps `www_<site>/version`, builds, deploys that site's hosting |
-| `REPO=<site> VERSION=<tag> npm run gen:index` | Rewrites `www_<site>/index.html` from `cml/`, `window.R.app` from the content repo's `package.json` at that tag |
+| `npm run gen:index:<site>` | Rewrites `www_<site>/index.html` from `cml/`, `window.R.app` from the content repo's `package.json` at that tag |
 | `npm run stop` | Frees the port |
 | `npm run book` | Builds every site's book; `SITE=<site>` for one |
 | `npm run new-site -- …` | Adds a site (see below) |
@@ -88,7 +88,7 @@ That creates `www_clean-code/` from [shared/template/](shared/template/), adds i
 ## Publish doc changes
 
 1. In the content repo: commit, push, release a new tag.
-2. Here: `REPO=<site> VERSION=<tag> npm run gen:index` rewrites `www_<site>/index.html`.
+2. Here: set the new tag in `gen:index:<site>` (`package.json`) and run it; it rewrites `www_<site>/index.html`.
 3. `SITE=<site> npm run deploy`.
 
 Agent and maintainer notes are in [CLAUDE.md](CLAUDE.md).

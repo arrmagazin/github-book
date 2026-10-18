@@ -7,7 +7,7 @@
  * first: the first directory that holds a path wins, and a content checkout may carry
  * a build/diagrams/ cache of its own under the same hash names (an engx working tree
  * passed with --src does), which would otherwise shadow the diagrams just rendered.
- * ROOT's top level is small and known (book/, build/, scripts/, shared/, www_*/), so
+ * ROOT's top level is small and known (book/, build/, scripts/, shared/, www_<site>/), so
  * it does not shadow the content repo's images in turn.
  * LaTeX's \includegraphics of the cover is not resolved through it: xelatex runs in
  * pandoc's working directory, which is why the cover path is relative to ROOT.

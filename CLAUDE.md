@@ -40,6 +40,7 @@ A site folder holds:
 | `favicon.svg`, `site.webmanifest` | yes | Icon and PWA manifest |
 | `version` | yes | Deploy counter; the service worker's cache key. Never hand-edit |
 | `service-worker.js` | yes | Symlink to `../shared/www/service-worker.js` |
+| `onload.js` | yes | Symlink to `../shared/www/onload.js`; registers the service worker off localhost. `cml/head.xml` loads it |
 | `dist/` | yes | The bundle, built per site. Gitignored |
 | `book.yaml` | no | pandoc metadata for the book: title, subtitle, author, rights |
 | `cover.png` | no | The book cover's photograph. Optional |
@@ -56,7 +57,7 @@ npm run book                 # every site's book; SITE=engx for one
 
 ## Shared files
 
-`shared/www/` holds files every site serves unchanged (today `service-worker.js`). Each
+`shared/www/` holds files every site serves unchanged (today `service-worker.js` and `onload.js`). Each
 is **spread into every site by a relative symlink**, never copied:
 `www_<site>/service-worker.js -> ../shared/www/service-worker.js`.
 
@@ -84,34 +85,33 @@ into `node_modules`; `arrmatura` is for `gen:index`), then `link-shared.sh`.
 
 ### The docs come from jsDelivr, not from a local tree
 
-`window.R` in the inline `<script>` of `www_<site>/index.html` is the only config surface.
-Two constants above it name the source, and they are the **one place** it is stated:
+`window.R`, the `<script id="R" type="application/json">` of `www_<site>/index.html`, is
+the only config surface. Its `book` block names the source, and it is the **one place**
+it is stated:
 
-```js
-const repo = 'arrmagazin/engx@1.0.1';   // <owner>/<repo>@<ref>
-const scope = "docs";                   // the repo folder holding the markdown
-...
+```json
 "book": {
-  "indexUrl": "https://data.jsdelivr.com/v1/packages/gh/"+repo+"?structure=tree",
-  "docUrl": "https://cdn.jsdelivr.net/gh/"+repo+"/"+scope+"/*",
-  scope,
+  "indexUrl": "https://data.jsdelivr.com/v1/packages/gh/arrmagazin/engx@1.0.1?structure=tree",
+  "docUrl": "https://cdn.jsdelivr.net/gh/arrmagazin/engx@1.0.1/docs/*",
+  "scope": "docs"
 }
 ```
 
-The browser reads them, and so does the book builder, through `siteSource()`. Keep both
-lines in that shape (either quote style). So the site, locally too, shows the docs as of
-that tag, not any working tree.
+The browser reads it, and so does the book builder, through `siteSource()`, which takes
+owner, repo and ref from `indexUrl` and the folder from `scope`. So the site, locally too,
+shows the docs as of that tag, not any working tree.
 
 ### Generating index.html
 
-`REPO=engx VERSION=1.0.1 npm run gen:index` (or `npm run gen:index:engx`) rewrites
-`www_<REPO>/index.html` from the templates in `cml/`, so the shell and `window.R` cannot
-drift between sites. `REPO` names the site and the content repo, which share the name;
-owner and scope come from the site's current `index.html` (`siteSource`), `VERSION`
-replaces the ref. `window.R.app` is filled from the content repo's `package.json` at that
-tag, fetched from jsDelivr: `name` → `id`, `displayName` → `name`, and `version`,
-`description`, `author`, `keywords`, `email`, `copyright` as they are. The `<meta>` tags
-read the same values.
+`npm run gen:index -- <owner>/<repo>/<ref>/<scope>` (or `npm run gen:index:<site>`, which
+pins that site's tag) rewrites `www_<repo>/index.html` from the templates in `cml/`, so the
+shell and `window.R` cannot drift between sites. The site and the content repo share the
+name. `window.R.app` is filled from the content repo's `package.json` at that tag, fetched
+from jsDelivr: `name` → `id`, `displayName` → `name`, and `version`, `description`,
+`author`, `keywords`, `email`, `copyright` as they are. The `<meta>` tags read the same
+values. The page's look comes from the same file: `theme` → `data-theme` (DaisyUI, default
+`corporate`) and `themeColor` → the `theme-color` meta (default `#1060c8`); they stay out
+of `window.R`.
 
 - `cml/html.xml` is the document frame (`Html`) and the page (`Index`, an empty body);
   `cml/head.xml` is `Head` and the `SEO` tags. The script runs under
@@ -121,8 +121,6 @@ read the same values.
   in as data (`R.bootstrap`) through the `json` pipe, and the `if` is a single statement.
   `&&` is written `&amp;&amp;`. `htmlStringify` writes `script`/`style` text raw (ultimus);
   before that fix the same JS came out as `&amp;&amp;`.
-- The generated script still opens with the `const repo` / `const scope` lines, in the
-  shape `siteSource()` parses; the browser does not use them.
 
 ### Cross-document links
 
@@ -190,8 +188,8 @@ Then, by hand:
 The site shows a tag, so a doc change goes live in three steps:
 
 1. In the content repo: commit, push, and release a new tag. jsDelivr serves tags.
-2. Here: `REPO=<site> VERSION=<new-tag> npm run gen:index` rewrites `www_<site>/index.html`
-   (or set `const repo = '<owner>/<repo>@<new-tag>'` by hand).
+2. Here: set the new tag in `gen:index:<site>` (`package.json`) and run it; it rewrites
+   `www_<site>/index.html`.
 3. `SITE=<site> npm run deploy`.
 
 The book follows the same line: `SITE=<site> npm run book` clones the new tag.

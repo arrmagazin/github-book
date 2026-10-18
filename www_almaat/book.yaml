@@ -1,0 +1,16 @@
+# Book metadata for book/build.ts. Pandoc reads this for both formats.
+title: ALMAAT
+subtitle: A general-purpose framework for cognitive modeling
+author: Almaat
+language: en-GB
+rights: © 2025 Almaat. All rights reserved.
+description: >-
+  One ontology built from a single primitive, then applied to the human, the collective, and daily practice.
+subject:
+  - Cognitive modeling
+  - Ontology
+  - Philosophy of mind
+# Fill this in before publishing:
+# identifier:
+#   - scheme: ISBN
+#     text: 978-0-000000-00-0

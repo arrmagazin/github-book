@@ -1,5 +1,5 @@
 <Component id="Html">
-  <html lang="en" data-theme="corporate">
+  <html lang="en" data-theme="{R.theme.name}">
     <Head>
       <Slot Key="head" />
     </Head>

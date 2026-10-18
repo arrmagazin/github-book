@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" role="img" aria-label="A">
+  <title>Almaster</title>
+  <!-- Stylized "A": a five-pointed star whose apex, crossbar and legs read as the letter.
+       Red body, white border, transparent background. The letter's counter is drawn in
+       white outline over the red body, so it never shows the page through. -->
+  <g fill="#dc2626" stroke="#ffffff" stroke-width="1.8" stroke-linejoin="miter">
+    <path d="M 24.00 5.00 L 28.27 18.13 L 42.07 18.13 L 30.90 26.24 L 35.17 39.37
+             L 24.00 31.26 L 12.83 39.37 L 17.10 26.24 L 5.93 18.13 L 19.73 18.13 Z"/>
+    <path d="M 24.00 8.50 L 30.00 23.50 L 18.00 23.50 Z"/>
+  </g>
+</svg>

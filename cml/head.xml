@@ -14,6 +14,7 @@
     <SEO />
     <script id="R" type="application/json">{R.bootstrap | json}</script>
     <script>window.autoLoad = true;</script>
+    <script src="/onload.js"></script>
     <Slot />
   </head>
 </Component>

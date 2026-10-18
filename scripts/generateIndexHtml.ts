@@ -6,15 +6,16 @@
 //
 // REPO names the site (`www_<REPO>/`) and the content repo, which share the name. The owner and
 // scope are read from the site's current index.html (siteSource); VERSION replaces its ref and
-// is optional. Needs the `.xml:txt` loader: the templates are imported as strings.
+// is optional. The page's theme comes from the same package.json (`theme`, `themeColor`).
+// Needs the `.xml:txt` loader: the templates are imported as strings.
 
 import * as path from "node:path";
 import { applyTemplate } from "arrmatura";
 import { htmlStringify, join, stringifyJson } from "ultimus";
 import head from "../cml/head.xml";
 import html from "../cml/html.xml";
-import seo from "../cml/seo.xml";
 import indexApp from "../cml/index.xml";
+import seo from "../cml/seo.xml";
 import { writeFileContent } from "./utils/files";
 import { siteDir } from "./utils/site";
 
@@ -45,6 +46,12 @@ export function appResources(pkg: any) {
   };
 }
 
+/** The page's DaisyUI theme and browser colour: `theme` / `themeColor` of the content repo's package.json. */
+export const themeResources = (pkg: any) => ({
+  name: pkg.theme ?? "corporate",
+  color: pkg.themeColor ?? "#1060c8",
+});
+
 /** `window.R`: the app block and the book's two jsDelivr endpoints at the pinned release. */
 export function bootstrap(source: Source, app: object) {
   const { owner, repo, ref, scope } = source;
@@ -63,10 +70,12 @@ const json = (x: unknown) => stringifyJson(x).replaceAll("\n", "\n        ");
 
 export async function main(source: Source) {
   const url = docUrl(source, "package.json");
-  const app = appResources(await fetchJson(url));
+  const pkg = await fetchJson(url);
+  const app = appResources(pkg);
 
   const config = {
     app,
+    theme: themeResources(pkg),
     source,
     bootstrap: bootstrap(source, app),
     functions: { join, json },
