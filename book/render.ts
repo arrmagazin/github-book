@@ -71,6 +71,28 @@ const PDF_CALLOUT =
 const PDF_DEFINITION_LIST =
   "\\usepackage{enumitem}" + "\\AtBeginEnvironment{description}{\\setlist[itemize]{leftmargin=1.2em}}";
 
+// Maths symbols that neither PDF_MAIN_FONT nor PDF_MONO_FONT carries, set in DejaVu
+// Sans instead, so they print rather than drop. No one monospace font has them all.
+// DejaVu ships with TeX Live, so it is there wherever xelatex is. A new symbol that
+// drops shows in the build log as "Missing character": add it here.
+//
+// XeTeX character classes rather than newunicodechar: that makes each symbol an
+// active character, and unicode-math redefines the active n-ary ones (⋀ ⋁ ⋂ ⋃) as
+// math operators, which then fail in text. A class switches the font around a run of
+// these symbols, in text only, and leaves maths alone. 4095 is the boundary class.
+const PDF_FALLBACK_CHARS = "⇒⊢⊤⊥⋀⋁⋂⋃∖∣⟹⟺ℝₖₙ";
+const hex = (char: string) => (char.codePointAt(0) ?? 0).toString(16).toUpperCase();
+// biome-ignore format: one preamble line per command
+const PDF_FALLBACK_FONT =
+  "\\newfontfamily\\bookfallback{DejaVuSans.ttf}" +
+  "\\XeTeXinterchartokenstate=1" +
+  "\\newXeTeXintercharclass\\bookfallbackclass" +
+  [...PDF_FALLBACK_CHARS].map((char) => `\\XeTeXcharclass"${hex(char)}=\\bookfallbackclass`).join("") +
+  "\\XeTeXinterchartoks 0 \\bookfallbackclass={\\begingroup\\bookfallback}" +
+  "\\XeTeXinterchartoks 4095 \\bookfallbackclass={\\begingroup\\bookfallback}" +
+  "\\XeTeXinterchartoks \\bookfallbackclass 0={\\endgroup}" +
+  "\\XeTeXinterchartoks \\bookfallbackclass 4095={\\endgroup}";
+
 // biome-ignore format: one preamble line per command
 const PDF_HEADER_INCLUDES =
   "header-includes=" +
@@ -79,7 +101,8 @@ const PDF_HEADER_INCLUDES =
   "\\AtBeginEnvironment{longtable}{\\small" + TABLE_PADDING + "}" +
   "\\AtBeginEnvironment{tabular}{\\small" + TABLE_PADDING + "}" +
   PDF_CALLOUT +
-  PDF_DEFINITION_LIST;
+  PDF_DEFINITION_LIST +
+  PDF_FALLBACK_FONT;
 
 // The book uses box-drawing characters for diagrams and a few maths symbols in
 // prose. TeX's default Latin Modern has none of them, so the PDF needs fonts that
