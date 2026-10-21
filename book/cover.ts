@@ -15,8 +15,8 @@ import { rasterHash } from "./diagrams";
 import { CHROME, RASTER_FORMAT, RASTER_SCALE, rasterizeSvg } from "./raster";
 
 // A4 proportions in CSS pixels, doubled to 1240x1754 by RASTER_SCALE, which is 150dpi
-// on A4. Not larger: the photograph is 752px wide, and a wider cover would only
-// upscale it further. It sits flush with the bottom edge at its own aspect ratio, and
+// on A4. Not larger: the cover image is 1240px wide, exactly this width, and a wider
+// cover would only upscale it. It sits flush with the bottom edge at its own aspect ratio, and
 // the top of it fades into the page over COVER_FADE of its height.
 export const COVER_WIDTH = 620;
 export const COVER_HEIGHT = 877;

@@ -55,6 +55,8 @@
     <script>window.autoLoad = true;</script>
     <script src="/onload.js"></script>
   </head>
-  <body></body>
+  <body>
+    <script>if (localStorage.theme ? localStorage.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches) document.body.dataset.theme = 'dark';</script>
+  </body>
   <script src="https://cdn.jsdelivr.net/gh/arrmatura/arrmatura-books@1.1.5/dist/index.min.js" type="module"></script>
 </html>

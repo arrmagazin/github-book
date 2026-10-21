@@ -2,11 +2,11 @@
 // Renders a site's index.html from the templates in cml/, with `window.R.app` filled from the
 // content repo's package.json at the release the site shows:
 //
-//   REPO=engx VERSION=1.0.1 npm run gen:index     # bun --loader .xml:txt scripts/generateIndexHtml.ts engx 1.0.1
+//   npm run gen:index -- arrmagazin/engx/1.0.1/docs     # <owner>/<repo>/<ref>/<scope>
 //
-// REPO names the site (`www_<REPO>/`) and the content repo, which share the name. The owner and
-// scope are read from the site's current index.html (siteSource); VERSION replaces its ref and
-// is optional. The page's theme comes from the same package.json (`theme`, `themeColor`).
+// <repo> names the site (`www_<repo>/`) and the content repo, which share the name; <ref> is the
+// tag the site shows. `gen:index:<site>` in package.json pins each site's argument.
+// The page's theme comes from the same package.json (`theme`, `themeColor`).
 // `R.book.store`, the book store link set by hand, is carried over from the current page.
 // Needs the `.xml:txt` loader: the templates are imported as strings.
 

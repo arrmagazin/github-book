@@ -17,7 +17,7 @@ import { ROOT, warn } from "./context";
 export const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
 // Scale 2 where the diagrams get 3: the cover is A4 at 620x877 CSS pixels, so 2 gives
-// 1240x1754, which is 150dpi on A4 — as much as a 752px photograph can carry.
+// 1240x1754, which is 150dpi on A4 — the full width of the 1240px cover image.
 //
 // And JPEG where the diagrams are PNG. The cover is mostly photograph, which is close
 // to incompressible, so lossless is the wrong bargain: it multiplies the size for no

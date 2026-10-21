@@ -14,7 +14,7 @@ content repos own their markdown, their releases and their checkers.
 | `shared/template/` | Files `new-site` fills in for a new site, with `{{placeholders}}` |
 | `index.ts`, `index.css` | The app shell, the same for every site |
 | `cml/` | The page-shell templates `gen:index` renders a site's `index.html` from. See **Generating index.html** |
-| `scripts/` | Site tooling: `serve.ts`, `build.ts`, `generateIndexHtml.ts`, `new-site.ts`, `deploy.sh`, `link-shared.sh`, `link-modules.sh`, `utils/` |
+| `scripts/` | Site tooling: `serve.ts`, `build.ts`, `generateIndexHtml.ts`, `new-site.ts`, `deploy.sh`, `release-all.sh`, `link-shared.sh`, `link-modules.sh`, `utils/` |
 | `book/` | The book builder. See [book/README.md](book/README.md) |
 | `firebase.json`, `.firebaserc` | Hosting: one entry and one target per site |
 | `build/` | Gitignored: `build/<site>/` per site, `build/diagrams/` shared |
@@ -116,6 +116,12 @@ values. The page's look comes from the same file: `theme` → `data-theme` (Dais
 `corporate`) and `themeColor` → the `theme-color` meta (default `#1060c8`); they stay out
 of `window.R`.
 
+**Dark mode.** `theme` is the light theme. The sun/moon button at the bottom of the sidebar
+(`ThemeService` in arrmatura-books) puts `data-theme="dark"` on `<body>`, over it, and keeps
+the choice in localStorage `theme` (`dark` | `light`); with none stored, the OS colour scheme
+decides. The one-line script at the top of `<body>` in `cml/html.xml` repeats that read
+before first paint, so a dark reader sees no light flash while the app loads.
+
 - `cml/html.xml` is the document frame (`Html`) and the page (`Index`, an empty body);
   `cml/head.xml` is `Head` and the `SEO` tags. The script runs under
   `bun --loader .xml:txt`, which imports them as strings.
@@ -194,6 +200,19 @@ The site shows a tag, so a doc change goes live in three steps:
    `www_<site>/index.html`.
 3. `SITE=<site> npm run deploy`.
 
+`npm run release-all` (`scripts/release-all.sh`) does all three for every site at once, and
+also for `arrmatura-books`, whose tag `cml/head.xml` and `cml/html.xml` pin:
+
+- Each target is the sibling checkout `../arrmatura-books` or `../<site>`. It must be a clean
+  `main` that is not behind origin.
+- HEAD already tagged with its `package.json` version → the tag is reused. Otherwise: bump
+  patch (a version still untagged is released as is), `npm run build` if the repo has one
+  (arrmatura-books commits `dist/`), commit `<version>`, push, tag, push the tag.
+- The tag keeps the repo's style from its nearest tag: `1.2.3` (engx, arrmatura-books) or
+  `v1.2.3` (almaat).
+- Then it pins the tags here, runs every `gen:index:<site>` and deploys every site. Re-running
+  is safe: released repos are reused. Commit the pins here by hand.
+
 The book follows the same line: `SITE=<site> npm run book` clones the new tag.
 
 ## The book
@@ -207,10 +226,6 @@ The book follows the same line: `SITE=<site> npm run book` clones the new tag.
 - Outputs: `build/<site>/<site>.md`, `.epub`, `.pdf`. Diagrams cache in `build/diagrams/`.
 - Needs pandoc, xelatex (PDF), git, npx (mermaid) and Chrome (cover). Missing `book.yaml`
   fails that site; missing `cover.png` or Chrome only drops the cover.
-- Known state: `arrmagazin/engx@1.0.1`, the tag `www_engx` pins, fails the structure check
-  (two links to `#glossary--delivery` and `#glossary--solution`; engx fixed them after the
-  tag). Until a new tag is released and pinned, build engx from its working tree:
-  `SITE=engx npm run book -- --src ../engx`.
 
 Why it does what it does (titles, reading order, page breaks, ids, links, `---`, mermaid,
 cover, void tags, image formats, table rules, callouts, PDF layout) is in
@@ -225,4 +240,5 @@ cover, void tags, image formats, table rules, callouts, PDF layout) is in
   `siteDir()` or the book's `Site` object.
 - One copy of each idea: a file every site serves goes in `shared/www/` and is linked;
   the source repo is stated only in `index.html`.
-- No `release` or checker scripts here: content repos own those.
+- No checker scripts here: content repos own those. `release-all` is the one script that
+  writes to them: it bumps, tags and pushes.
