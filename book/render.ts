@@ -120,9 +120,12 @@ function run(command: string, args: string[]): void {
   if (result.status !== 0) throw new Error(`${command} exited with status ${result.status}`);
 }
 
-/** Run a command and return its stdout. Throws on a nonzero exit. */
+/**
+ * Run a command and return its stdout. Throws on a nonzero exit. The buffer is
+ * unbounded: verifyAnchors captures a whole book as HTML, past the 1 MB default.
+ */
 function capture(command: string, args: string[]): string {
-  const result = spawnSync(command, args, { cwd: ROOT, encoding: "utf8" });
+  const result = spawnSync(command, args, { cwd: ROOT, encoding: "utf8", maxBuffer: Infinity });
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error(`${command} exited with status ${result.status}\n${result.stderr}`);
   return result.stdout;
