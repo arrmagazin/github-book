@@ -7,6 +7,7 @@
 // REPO names the site (`www_<REPO>/`) and the content repo, which share the name. The owner and
 // scope are read from the site's current index.html (siteSource); VERSION replaces its ref and
 // is optional. The page's theme comes from the same package.json (`theme`, `themeColor`).
+// `R.book.store`, the book store link set by hand, is carried over from the current page.
 // Needs the `.xml:txt` loader: the templates are imported as strings.
 
 import * as path from "node:path";
@@ -17,7 +18,7 @@ import html from "../cml/html.xml";
 import indexApp from "../cml/index.xml";
 import seo from "../cml/seo.xml";
 import { writeFileContent } from "./utils/files";
-import { siteDir } from "./utils/site";
+import { siteBook, siteDir } from "./utils/site";
 
 type Source = { owner: string; repo: string; ref: string; scope: string };
 
@@ -52,8 +53,9 @@ export const themeResources = (pkg: any) => ({
   color: pkg.themeColor ?? "#1060c8",
 });
 
-/** `window.R`: the app block and the book's two jsDelivr endpoints at the pinned release. */
-export function bootstrap(source: Source, app: object) {
+/** `window.R`: the app block, the book's two jsDelivr endpoints at the pinned release, and
+ * the book store link when there is one. */
+export function bootstrap(source: Source, app: object, store?: unknown) {
   const { owner, repo, ref, scope } = source;
   return {
     app,
@@ -61,6 +63,7 @@ export function bootstrap(source: Source, app: object) {
       indexUrl: `https://data.jsdelivr.com/v1/packages/gh/${owner}/${repo}@${ref}?structure=tree`,
       docUrl: docUrl(source, `${scope}/*`),
       scope,
+      ...(store ? { store } : {}),
     },
   };
 }
@@ -77,7 +80,7 @@ export async function main(source: Source) {
     app,
     theme: themeResources(pkg),
     source,
-    bootstrap: bootstrap(source, app),
+    bootstrap: bootstrap(source, app, siteBook(source.repo).store),
     functions: { join, json },
     components: [html, head, seo, indexApp],
   };

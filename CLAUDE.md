@@ -14,7 +14,7 @@ content repos own their markdown, their releases and their checkers.
 | `shared/template/` | Files `new-site` fills in for a new site, with `{{placeholders}}` |
 | `index.ts`, `index.css` | The app shell, the same for every site |
 | `cml/` | The page-shell templates `gen:index` renders a site's `index.html` from. See **Generating index.html** |
-| `scripts/` | Site tooling: `serve.ts`, `build.ts`, `generateIndexHtml.ts`, `new-site.ts`, `deploy.sh`, `link-shared.sh`, `link-modules.sh`, `bump-version.sh`, `utils/` |
+| `scripts/` | Site tooling: `serve.ts`, `build.ts`, `generateIndexHtml.ts`, `new-site.ts`, `deploy.sh`, `link-shared.sh`, `link-modules.sh`, `utils/` |
 | `book/` | The book builder. See [book/README.md](book/README.md) |
 | `firebase.json`, `.firebaserc` | Hosting: one entry and one target per site |
 | `build/` | Gitignored: `build/<site>/` per site, `build/diagrams/` shared |
@@ -38,7 +38,6 @@ A site folder holds:
 | --- | --- | --- |
 | `index.html` | yes | Page shell and `window.R`, the app's one config surface |
 | `favicon.svg`, `site.webmanifest` | yes | Icon and PWA manifest |
-| `version` | yes | Deploy counter; the service worker's cache key. Never hand-edit |
 | `service-worker.js` | yes | Symlink to `../shared/www/service-worker.js` |
 | `onload.js` | yes | Symlink to `../shared/www/onload.js`; registers the service worker off localhost. `cml/head.xml` loads it |
 | `dist/` | yes | The bundle, built per site. Gitignored |
@@ -51,7 +50,7 @@ A site folder holds:
 ```sh
 SITE=engx npm run dev        # serve www_engx on :8092 (PORT overrides)
 SITE=engx npm run build      # bundle into www_engx/dist
-SITE=engx npm run deploy     # bump www_engx/version, build, deploy
+SITE=engx npm run deploy     # build, deploy
 npm run book                 # every site's book; SITE=engx for one
 ```
 
@@ -101,6 +100,10 @@ The browser reads it, and so does the book builder, through `siteSource()`, whic
 owner, repo and ref from `indexUrl` and the folder from `scope`. So the site, locally too,
 shows the docs as of that tag, not any working tree.
 
+The sidebar's bottom bar links to the GitHub repo (derived from `indexUrl`) and, when the
+book is sold somewhere, to its store: add `"store": "<url>"` to the `book` block by hand.
+`gen:index` carries `store` over from the current page when it regenerates it.
+
 ### Generating index.html
 
 `npm run gen:index -- <owner>/<repo>/<ref>/<scope>` (or `npm run gen:index:<site>`, which
@@ -135,7 +138,7 @@ and the app is hash-routed, so following one would clobber the current route.
 
 `SITE=<site> npm run deploy`:
 
-1. `predeploy` bumps `www_<site>/version` (`bump-version.sh`) and runs `npm run build`.
+1. `predeploy` runs `npm run build`.
 2. `scripts/deploy.sh <site>` finds the project whose `.firebaserc`
    `targets.<project>.hosting` names `<site>`, then runs
    `firebase deploy --only hosting:<site> --config ./firebase.json -P <project>`.
@@ -148,10 +151,9 @@ and the app is hash-routed, so following one would clobber the current route.
   `targets.parlang.hosting.engx = ["software-engineering"]`.
 - `ignore` drops `book.yaml` and `cover.png` (book inputs are not served), source maps and
   dotfiles.
-- `service-worker.js` derives its cache name from `/version`, so the bump is what
-  invalidates stale client caches. Never hand-edit `version`.
-- `version` needs its `no-store` header (in `firebase.json`) and must not be named
-  `.version`: the `**/.*` ignore would silently drop it.
+- `service-worker.js` keeps one cache, `cache`, and caches only CDN files (fonts, icons,
+  jsDelivr), forever: entries never expire. Site files are never cached, so a deploy needs no
+  cache bump. On activate it deletes the `cache-v<N>` caches of the older per-deploy worker.
 - `** -> /index.html` rewrite: every path serves the app.
 - Port 8092 by default; `npm run stop` frees it. 8091 is the almaat site.
 
@@ -161,7 +163,7 @@ and the app is hash-routed, so following one would clobber the current route.
 npm run new-site -- <name> <firebase-site-id> <owner/repo@ref> [--scope docs] [--project parlang]
 ```
 
-It creates `www_<name>/` from `shared/template/` with `version` 0, appends a
+It creates `www_<name>/` from `shared/template/` and appends a
 `firebase.json` entry (a copy of the first, with the new `target` and `public`), adds the
 `.firebaserc` target, and runs `link-shared.sh`. It refuses if the folder or the target
 already exists, or if another target already deploys to `<firebase-site-id>` (deploying
