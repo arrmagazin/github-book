@@ -10,6 +10,12 @@
         "book.yaml",
         "cover.png"
       ],
+      "headers": [
+        {
+          "source": "**",
+          "headers": [{ "key": "tdm-reservation", "value": "1" }]
+        }
+      ],
       "rewrites": [
         {
           "source": "**",
