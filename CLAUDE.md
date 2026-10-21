@@ -12,7 +12,7 @@ content repos own their markdown, their releases and their checkers.
 | `www_<site>/` | One site: its Firebase public root, and the inputs for its book. See **Sites** |
 | `shared/www/` | Files every site serves unchanged. The one copy of each. See **Shared files** |
 | `shared/template/` | Files `new-site` fills in for a new site, with `{{placeholders}}` |
-| `index.ts`, `index.css` | The app shell, the same for every site |
+| `index.ts` | The app shell for local dev. Deployed pages load the built JS and CSS of `arrmatura-books` from jsDelivr |
 | `cml/` | The page-shell templates `gen:index` renders a site's `index.html` from. See **Generating index.html** |
 | `scripts/` | Site tooling: `serve.ts`, `build.ts`, `generateIndexHtml.ts`, `new-site.ts`, `deploy.sh`, `release-all.sh`, `link-shared.sh`, `link-modules.sh`, `utils/` |
 | `book/` | The book builder. See [book/README.md](book/README.md) |
@@ -74,8 +74,9 @@ is **spread into every site by a relative symlink**, never copied:
 
 `index.ts` calls `launchBook()` from `arrmatura-books`, which supplies the whole UI. UI
 changes belong in `arrmatura-books`; the local `cml/` holds only the static page shell
-(see **Generating index.html**). `index.css` is the Tailwind v4 + DaisyUI entry. `scripts/build.ts` bundles into
-`./www_<SITE>/dist`; `scripts/serve.ts` serves `./www_<SITE>` with esbuild and rebuilds
+(see **Generating index.html**). Each page loads the library's `dist/index.css` and
+`dist/index.min.js` from jsDelivr at the version pinned in `cml/head.xml` and `cml/html.xml`;
+there is no local CSS or bundle build. `scripts/serve.ts` serves `./www_<SITE>` with esbuild and rebuilds
 on change.
 
 **Library links.** `npm install` runs `postinstall` → `link`, which runs
@@ -142,13 +143,10 @@ and the app is hash-routed, so following one would clobber the current route.
 
 ## Deploy
 
-`SITE=<site> npm run deploy`:
-
-1. `predeploy` runs `npm run build`.
-2. `scripts/deploy.sh <site>` finds the project whose `.firebaserc`
-   `targets.<project>.hosting` names `<site>`, then runs
-   `firebase deploy --only hosting:<site> --config ./firebase.json -P <project>`.
-   Extra args pass through: `./scripts/deploy.sh engx --dry-run`.
+`SITE=<site> npm run deploy` runs `scripts/deploy.sh <site>`, which finds the project whose
+`.firebaserc` `targets.<project>.hosting` names `<site>`, then runs
+`firebase deploy --only hosting:<site> --config ./firebase.json -P <project>`.
+Extra args pass through: `./scripts/deploy.sh engx --dry-run`.
 
 - `firebase.json` `hosting` is an **array**, one entry per site:
   `{ target, public: "www_<site>", ignore, headers, rewrites }`. Every entry has the same
