@@ -15,6 +15,8 @@ const EXPLICIT_ID_RE = /\{#([^}\s]+)[^}]*\}\s*$/;
 // markdown extension to be read as LaTeX, and every other writer drops it.
 const PAGE_BREAK = "```{=latex}\n\\clearpage\n```";
 const DOCUMENT_HEADING_RE = /^(#{1,6} .*\{#[^}\s]+)\}/;
+const FOOTNOTE_RE = /\[\^([^\]\s^[]+)\]/g;
+const INLINE_CODE_RE = /(`+[^`]*`+)/;
 const SETEXT_UNDERLINE_RE = /^ {0,3}(=+|-+)[ \t]*$/;
 // Lines that open some other block (heading, quote, table, HTML, list) and so cannot be
 // the text of a setext heading.
@@ -116,6 +118,30 @@ export function closeVoidTags(text: string): string {
       // trimEnd: the attribute group absorbs the space in `<br />`, which would
       // otherwise come back out as `<br />` rather than a uniform `<br/>`.
       return bare.replace(VOID_TAG_RE, (_, tag: string, attributes: string) => `<${tag}${attributes.trimEnd()}/>`);
+    })
+    .join("\n");
+}
+
+/**
+ * Prefix every footnote label with `prefix`, so `[^1]` becomes `[^prefix--1]`,
+ * outside fenced blocks and inline code.
+ *
+ * Each document numbers its own notes from 1. Assembled into one, the labels collide
+ * and pandoc gives every `[^1]` the first `[^1]:` it met: the wrong citation, with
+ * only a warning. Code is skipped: `[^a-z]` there is a regex, not a note.
+ */
+export function scopeFootnotes(text: string, prefix: string): string {
+  let fence: Fence = null;
+  return text
+    .split("\n")
+    .map((bare) => {
+      let isFence: boolean;
+      [isFence, fence] = fenceStep(fence, bare);
+      if (isFence || fence !== null) return bare;
+      return bare
+        .split(INLINE_CODE_RE)
+        .map((part, i) => (i % 2 ? part : part.replace(FOOTNOTE_RE, `[^${prefix}--$1]`)))
+        .join("");
     })
     .join("\n");
 }

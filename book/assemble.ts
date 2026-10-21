@@ -14,6 +14,7 @@ import {
   addHeadingIds,
   closeVoidTags,
   normalizeThematicBreaks,
+  scopeFootnotes,
   setextToAtx,
   shiftHeadings,
   slugify,
@@ -204,7 +205,7 @@ export function assemble(documents: Document[], site: Pick<Site, "docs" | "src">
   const anchors = documentAnchors(documents);
   const chunks = documents.map(({ path: docPath, body }) => {
     const isChapterOpener = !docPath.includes("/") || docPath.endsWith("/index.md");
-    let text = closeVoidTags(normalizeThematicBreaks(body));
+    let text = scopeFootnotes(closeVoidTags(normalizeThematicBreaks(body)), anchors[docPath]);
     text = addHeadingIds(rewriteLinks(text, docPath, anchors, site), anchors[docPath]);
     return isChapterOpener ? text : startOnANewPage(shiftHeadings(text));
   });
