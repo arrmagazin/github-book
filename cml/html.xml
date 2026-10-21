@@ -6,6 +6,6 @@
     <body class="{bodyClass}">
       <Slot />
     </body>
-    <script src="https://cdn.jsdelivr.net/gh/arrmatura/arrmatura-books@1.1.4/dist/index.min.js" type="module" If="!static"></script>
+    <script src="https://cdn.jsdelivr.net/gh/arrmatura/arrmatura-books@1.1.5/dist/index.min.js" type="module" If="!static"></script>
   </html>
 </Component>
