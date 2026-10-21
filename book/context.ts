@@ -17,6 +17,7 @@ export const BUILD = path.join(ROOT, "build");
 export const DIAGRAMS = path.join(BUILD, "diagrams");
 
 const BOOK_DIR = path.join(ROOT, "book");
+export const TABLE_WIDTHS = path.join(BOOK_DIR, "table-widths.lua");
 export const TABLE_RULES = path.join(BOOK_DIR, "table-rules.lua");
 export const CODE_BREAKS = path.join(BOOK_DIR, "code-breaks.lua");
 export const EPUB_CSS = path.join(BOOK_DIR, "epub.css");

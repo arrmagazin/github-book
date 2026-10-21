@@ -16,7 +16,7 @@
 import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { CODE_BREAKS, EPUB_CSS, ROOT, type Site, TABLE_RULES, warn } from "./context";
+import { CODE_BREAKS, EPUB_CSS, ROOT, type Site, TABLE_RULES, TABLE_WIDTHS, warn } from "./context";
 
 // A bare '---' in the book is a horizontal rule, never metadata.
 // normalizeThematicBreaks removes the other readings; this removes the one it cannot.
@@ -193,6 +193,8 @@ export function render(
     "--resource-path", [ROOT, site.src].join(path.delimiter),
     "--metadata-file", site.metadata,
     "--output", outPath,
+    // Before table-rules.lua, which turns each table into raw LaTeX.
+    "--lua-filter", TABLE_WIDTHS,
   ];
   if (target === "pdf") {
     // biome-ignore format: each flag beside its value

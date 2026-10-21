@@ -53,7 +53,7 @@ first and replaces the cached copy only on success, so a failed refresh keeps it
 | `raster.ts` | headless Chrome rasterizer |
 | `cover.ts` | the cover SVG and its cache |
 | `render.ts` | the PDF preamble, `verifyAnchors`, the pandoc calls |
-| `table-rules.lua`, `code-breaks.lua`, `epub.css` | pandoc filters and the EPUB stylesheet |
+| `table-widths.lua`, `table-rules.lua`, `code-breaks.lua`, `epub.css` | pandoc filters and the EPUB stylesheet |
 
 No module derives a path from one site's layout. A `Site` object carries `name`, `dir`,
 `src`, `docs`, `build`, `metadata` and `coverPhoto`, all absolute, to whatever needs them.
@@ -140,6 +140,15 @@ than serving images made at the old setting.
 **No SVG in the content.** xelatex cannot embed SVG, so an SVG figure in a content repo is
 dropped from the PDF. The only SVG in the build is the cover, which the builder generates.
 Content should use a mermaid diagram or a PNG.
+
+## Table column widths
+
+Once a pipe-table line runs past 72 characters, pandoc takes the column widths from the
+dashes in the `| --- |` separator, so a prose column can come out a tenth of the page wide.
+A shorter table gets no widths and is set narrow and centred. `table-widths.lua` sets
+every table to the full measure and sizes each column by the text it holds, header
+included, never below its longest word. It runs for both formats, before
+`table-rules.lua`, which turns each table into raw LaTeX.
 
 ## Separated table rows
 
