@@ -13,7 +13,7 @@
     "start:open": "npx --yes wait-on http://localhost:${PORT:?no port} && open http://localhost:${PORT:?no port}/",
     "stop": "lsof -t -sTCP:LISTEN -i tcp:${PORT:-8092} | xargs -r kill -9",
     "gen:index:engx": "npm run gen:index -- \"arrmagazin/engx/1.0.1/docs\"",
-    "gen:index:almaat": "npm run gen:index -- \"arrmagazin/almaat/v1.0.2/docs\"",
+    "gen:index:almaat": "npm run gen:index -- \"arrmagazin/almaat/main/docs\"",
     "gen:index": "bun --loader .xml:txt ./scripts/generateIndexHtml.ts",
     "build": "npx --yes npm-run-all --parallel build:*",
     "build:ts": "bun ./scripts/build.ts",
