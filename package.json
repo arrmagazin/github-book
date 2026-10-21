@@ -21,7 +21,7 @@
     "book": "bun ./book/build.ts",
     "deploy:engx": "SITE=engx PORT=${PORT:-8092} npm run deploy",
     "deploy:almaat": "SITE=almaat PORT=${PORT:-8091} npm run deploy",
-    "predeploy": "./scripts/bump-version.sh \"./www_${SITE:?set SITE=<site>}/version\" && npm run build",
+    "predeploy": "npm run build",
     "deploy": "./scripts/deploy.sh \"${SITE:?set SITE=<site>}\"",
     "new-site": "bun ./scripts/new-site.ts",
     "postinstall": "npm run link",

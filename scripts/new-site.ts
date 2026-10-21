@@ -146,7 +146,6 @@ function main() {
   }
 
   instantiate(dir, templateVars(name, repo, opts));
-  fs.writeFileSync(path.join(dir, "version"), "0");
 
   // Every entry has the same shape; only target and public root differ.
   const [first] = firebase.hosting;

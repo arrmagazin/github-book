@@ -1,102 +1,64 @@
-const DAY_MS = 24 * 60 * 60 * 1000;
-const DEFAULT_TTL_MS = 30 * DAY_MS;
-const CACHED_AT_HEADER = "sw-cached-at";
-const CACHE_TTL_HEADER = "sw-cache-ttl";
+// One cache for the site. Entries never expire; there is no per-deploy cache.
+const CACHE_NAME = "cache";
 
-// Cache name is derived from the deployed `/version` file. When that file
-// changes, the cache name changes too, so the old cache is dropped on activate.
-let cacheNamePromise;
-const getCacheName = () => {
-  if (!cacheNamePromise) {
-    cacheNamePromise = fetch("/version", { cache: "no-store" })
-      .then((response) => (response.ok ? response.text() : "0"))
-      .catch(() => "0")
-      .then((version) => `cache-v${version.trim()}`);
-  }
-  return cacheNamePromise;
-};
+// Answer instead of rejecting: a rejected respondWith() is logged as an uncaught error and
+// shows the browser's network-error page.
+const OFFLINE_PAGE = `<!doctype html><html lang="en"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Offline</title>
+<body style="font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;color:#1f2937">
+<main style="text-align:center;padding:24px"><h1 style="margin:0 0 8px">You're offline</h1>
+<p style="margin:0 0 20px;color:#6b7280">This page can't load right now. Check your connection.</p>
+<button onclick="location.reload()" style="font:inherit;font-weight:600;padding:12px 24px;border:0;border-radius:999px;background:#1f2937;color:#fff;cursor:pointer">Try again</button>
+</main></body></html>`;
+const offlineResponse = (request) =>
+  request.mode === "navigate"
+    ? new Response(OFFLINE_PAGE, { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } })
+    : new Response("", { status: 504, statusText: "Offline" });
 
+// Responses kept forever: CDN files only. Site files are never cached.
 const filters = [
-  { ttl: 30 * DAY_MS, match: (url) => url.startsWith("https://fonts.googleapis.com/") },
-  { ttl: 365 * DAY_MS, match: (url) => url.startsWith("https://fonts.gstatic.com/") },
-  { ttl: 7 * DAY_MS, match: (url) => url.startsWith("https://unpkg.com/l") },
-  { ttl: 7 * DAY_MS, match: (url) => url.endsWith("lucide.css") },
-  { ttl: DAY_MS, match: (url) => url.startsWith("https://data.jsdelivr.com/v1/") },
-  { ttl: DAY_MS, match: (url) => url.startsWith("https://cdn.jsdelivr.net/gh/") },
-  {
-    ttl: 365 * DAY_MS,
-    match: (_url, headers) => headers.has("content-type") && headers.get("content-type").match(/^font\//i),
-  },
+  (url) => url.startsWith("https://fonts.googleapis.com/"),
+  (url) => url.startsWith("https://fonts.gstatic.com/"),
+  (url) => url.startsWith("https://unpkg.com/l"),
+  (url) => url.endsWith("lucide.css"),
+  (url) => url.startsWith("https://data.jsdelivr.com/v1/"),
+  (url) => url.startsWith("https://cdn.jsdelivr.net/gh/"),
+  (_url, headers) => headers.has("content-type") && headers.get("content-type").match(/^font\//i),
 ];
 
 self.addEventListener("activate", (event) => {
+  // Drop the per-deploy "cache-v<N>" caches of earlier workers.
   event.waitUntil(
-    getCacheName().then((currentCacheName) =>
-      caches.keys().then((cacheNames) =>
-        Promise.all(
-          cacheNames.map((cacheName) => {
-            // Delete every 'cache-*' cache except the one matching the current `/version`.
-            if (cacheName.startsWith("cache-") && cacheName !== currentCacheName) {
-              console.log("Deleting out of date cache:", cacheName);
-              return caches.delete(cacheName);
-            }
-            return undefined;
-          })
-        )
-      )
-    )
+    caches
+      .keys()
+      .then((cacheNames) =>
+        Promise.all(cacheNames.filter((name) => name.startsWith("cache-")).map((name) => caches.delete(name))),
+      ),
   );
 });
-
-const isExpired = (response) => {
-  const cachedAt = Number(response.headers.get(CACHED_AT_HEADER));
-  const ttl = Number(response.headers.get(CACHE_TTL_HEADER)) || DEFAULT_TTL_MS;
-  return !cachedAt || Date.now() - cachedAt > ttl;
-};
-
-const withCacheMeta = async (response, ttl) => {
-  const headers = new Headers(response.headers);
-  headers.set(CACHED_AT_HEADER, Date.now().toString());
-  headers.set(CACHE_TTL_HEADER, String(ttl));
-  return new Response(await response.blob(), {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  });
-};
 
 self.addEventListener("fetch", (event) => {
   const url = event.request.url;
   event.respondWith(
-    getCacheName()
-      .then((cacheName) => caches.open(cacheName))
+    caches
+      .open(CACHE_NAME)
       .then(async (cache) => {
         const cached = await cache.match(event.request);
-        if (cached && !isExpired(cached)) return cached;
+        if (cached) return cached;
 
         try {
           const response = await fetch(event.request.clone());
-          if (response.status !== 200) return cached ?? response;
-
-          const filter = filters.find((fn) => fn.match(url, response.headers));
-          if (filter) {
-            const stamped = await withCacheMeta(response, filter.ttl ?? DEFAULT_TTL_MS);
-            await cache.put(event.request, stamped.clone());
-            return stamped;
+          if (response.status === 200 && filters.some((match) => match(url, response.headers))) {
+            await cache.put(event.request, response.clone());
           }
-
           return response;
-        } catch (error) {
-          if (cached) {
-            console.warn("Network failed, serving stale cache:", url);
-            return cached;
-          }
-          throw error;
+        } catch {
+          return offlineResponse(event.request);
         }
       })
       .catch((error) => {
         console.error("Error in fetch handler:", error);
-        throw error;
-      })
+        return offlineResponse(event.request);
+      }),
   );
 });

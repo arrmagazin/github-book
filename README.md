@@ -45,7 +45,7 @@ SITE=engx npm run dev        # serves engx on http://localhost:8092
 | --- | --- |
 | `SITE=<site> npm run dev` | Serves the site on :8092 (`PORT` overrides), opens a browser |
 | `SITE=<site> npm run build` | Bundles the app and CSS into `www_<site>/dist` |
-| `SITE=<site> npm run deploy` | Bumps `www_<site>/version`, builds, deploys that site's hosting |
+| `SITE=<site> npm run deploy` | Builds, deploys that site's hosting |
 | `npm run gen:index:<site>` | Rewrites `www_<site>/index.html` from `cml/`, `window.R.app` from the content repo's `package.json` at that tag |
 | `npm run stop` | Frees the port |
 | `npm run book` | Builds every site's book; `SITE=<site>` for one |

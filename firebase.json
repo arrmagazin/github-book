@@ -10,17 +10,6 @@
         "book.yaml",
         "cover.png"
       ],
-      "headers": [
-        {
-          "source": "version",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-store"
-            }
-          ]
-        }
-      ],
       "rewrites": [
         {
           "source": "**",
@@ -37,17 +26,6 @@
         "**/.*",
         "book.yaml",
         "cover.png"
-      ],
-      "headers": [
-        {
-          "source": "version",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-store"
-            }
-          ]
-        }
       ],
       "rewrites": [
         {

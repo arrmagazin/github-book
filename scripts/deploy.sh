@@ -4,7 +4,7 @@
 #
 # Deploys one site's hosting. The Firebase project is the one whose .firebaserc
 # "targets.<project>.hosting" names <site>; the target maps to the Firebase site id.
-# Run by `SITE=<site> npm run deploy` (after predeploy bumps the version and builds).
+# Run by `SITE=<site> npm run deploy` (after predeploy builds).
 
 set -eu
 
